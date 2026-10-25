@@ -9,7 +9,7 @@ import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
-VERSION = "5.4"
+VERSION = "5.6"
 PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(PKG_DIR, "web")
 ROOT_DIR = os.path.dirname(PKG_DIR)

@@ -374,6 +374,12 @@ details[open] summary{margin-bottom:12px}
 .seg button{border:0;background:transparent;padding:7px 12px;cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.06em;color:var(--muted)}
 .seg button[aria-selected="true"]{background:linear-gradient(180deg,#3a2c1a,#21180f);color:var(--gold)}
 .seg button:disabled{opacity:.4;cursor:not-allowed}
+/* the picker is a height-limited flex column: keep its header and tabs at full height, only the lists scroll */
+.picker>.pk-head,.picker>.seg{flex-shrink:0}
+.picker>.seg{display:flex;max-width:100%;flex-wrap:nowrap}
+.picker>.seg button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.picker>.seg button:first-child{flex:0 0 auto}
+.picker>.seg button+button{flex:1 1 auto;text-align:left}
 .en-row .en-mark,.en-mark{width:6px;align-self:stretch;border-radius:3px;background:linear-gradient(180deg,var(--ench),#2a7fa0);box-shadow:0 0 8px #5fe3ff66}
 .en-row{grid-template-columns:6px minmax(0,1fr) auto}
 .pk-row.locked,.pt-row.locked{opacity:.55;cursor:not-allowed}
@@ -545,19 +551,35 @@ function itemCats(it){ return it.cat||"u"; }
 function srcCats(){ const c=(S.settings||{}).srcCats; return typeof c==="string"?c:"wdrcpu"; }
 function srcOk(it,cats){ cats=cats??srcCats(); const ic=itemCats(it); for(const ch of ic) if(cats.includes(ch)) return true; return false; }
 /* another equipped item this one can't be worn alongside (Unique / Unique-Equipped group) */
+/* Quest-only gear: each quest gives one reward, once. So you can only own as many copies of a quest-only item as there
+   are quests offering it, and two rewards from the same quest can't both be had (pick one) unless another quest
+   offers one of them. With two slots per pair that boils down to: they need two different quests between them. */
+function myQuests(it,state){   // the quests this character's faction can do for this item
+  const fac=(state||S).char.faction==="Horde"?"h":"a";
+  return (it.qo||[]).filter((q,i)=>!(it.qf&&it.qf[i])||it.qf[i]===fac);
+}
+function questClash(a,b,state){
+  if(!a||!b||!a.qo||!b.qo) return false;
+  return new Set([...myQuests(a,state),...myQuests(b,state)]).size<2;
+}
 function uniqueClash(it,slot,state){
-  if(!it||!it.u) return null;
+  if(!it) return null;
   for(const s of SLOTS){ if(s===slot) continue; const o=itemFor(state,s); if(!o) continue;
-    if(o.id===it.id || (it.ug&&o.ug===it.ug)) return {slot:s,it:o}; }
+    if(it.u && (o.id===it.id || (it.ug&&o.ug===it.ug))) return {slot:s,it:o,why:it.ug?`Unique-Equipped (${it.ug})`:"Unique"};
+    if(questClash(it,o,state)) return {slot:s,it:o,why:o.id===it.id?"a quest reward you can only get once":`a reward from the same quest as ${o.n} (${it.qn&&it.qn[0]||"quest"}), and a quest gives only one`}; }
   return null;
 }
 function itemFor(state,slot){ const g=state.gear[slot]; return g&&g.id?ITEM_BY_ID[g.id]:null; }
+/* a two-handed weapon (staff, polearm, two-hand sword/axe/mace) takes both hands: nothing can go in the off hand */
+function isTwoHand(it){ return !!it && it.inv===17; }
+function offHandBlocked(state){ return isTwoHand(itemFor(state,"Main Hand")); }
 /* normalised stats for one equipped slot (item from the database, or an older hand-typed entry) */
 function slotView(state,slot){
   const g=state.gear[slot]; if(!g) return {};
   const it=g.id&&ITEM_BY_ID[g.id];
   if(!it) return g.id?{}:g;
   if(!isActive(it)) return {name:it.n, inactive:true};                 // not confirmed in Forever, so it adds nothing
+  if(slot==="Off Hand" && offHandBlocked(state)) return {name:it.n, blocked:true};   // hands are full with a two-hander
   if(it.lv>(+state.char.level||60)) return {name:it.n, over:true};   // can't be worn yet, so it adds nothing
   const o=Object.assign({name:it.n},it.st||{});
   if(it.w){ o.wmin=it.w.min; o.wmax=it.w.max; o.wspd=it.w.spd; }
@@ -943,13 +965,19 @@ function renderEditor(el){
   if(qs("#cNo")) qs("#cNo").onclick=()=>{ ui.confirm=null; d.cls=S.char.cls; render(); };
 }
 
+/* "Active · Instant · 2 min cooldown": the cooldown is the wait before you can use it again, not how long it lasts */
+function racialBadge(rc){
+  if(rc.type!=="active") return "Passive";
+  const cast=rc.cast||((rc.desc||"").match(/^(?:\d+ yd range, )?(Instant|Channeled|\d+(?:\.\d+)? sec cast)/)||[])[1];
+  return ["Active",cast,rc.cd?`${rc.cd} cooldown`:null].filter(Boolean).join(" · ");
+}
 function renderRacials(){
   const el=qs("#racials");
   if(!S.char.race){ el.innerHTML=""; return; }
   const r=raceInfo(); const list=(r.racials||[]).slice(0,4);
   if(!list.length){ el.innerHTML=`<div class="frame racial" style="grid-column:1/-1"><span class="muted">Racial data for ${esc(RACE_NAME[S.char.race])} hasn't loaded.</span></div>`; return; }
   el.innerHTML=list.map((rc,i)=>`<article class="frame racial">
-    <div class="meta"><span class="tag ${rc.type==="active"?"active":"passive"}">${rc.type==="active"?"Active":"Passive"}${rc.cd?" · "+esc(rc.cd):""}</span>${rc.src&&rc.src!=="forever"?`<span class="tag src">${rc.src==="classic"?"Classic value":"Unconfirmed"}</span>`:""}</div>
+    <div class="meta"><span class="tag ${rc.type==="active"?"active":"passive"}" title="${rc.type==="active"?`You use it${rc.cd?`, then wait ${esc(rc.cd)} before you can use it again`:""}. How long the effect lasts is in the description.`:"Always on, nothing to press"}">${esc(racialBadge(rc))}</span>${rc.src&&rc.src!=="forever"?`<span class="tag src">${rc.src==="classic"?"Classic value":"Unconfirmed"}</span>`:""}</div>
     <div class="rhead"><img src="${ICON(rc.icon)}" alt=""><h3>${esc(rc.name)}</h3></div><div class="desc">${esc(rc.desc)}</div>
     ${rc.type==="active"&&rc.effects&&rc.effects.length?`<label class="switch"><input type="checkbox" id="rac${i}" data-n="${esc(rc.name)}" ${S.racialOn[rc.name]?"checked":""}> Include in stat calc</label>`:""}
   </article>`).join("");
@@ -1222,7 +1250,20 @@ function enchantOn(state,slot,it){
   const en=ENCH_BY_ID[id]; if(!en||!it||!enchantFits(en,it)) return null;
   return en;
 }
-function enchantText(en){ return en.n.replace(/^Enchant: /,""); }
+/* An enchant shows its name and what it gives: "Superior Strength: Strength +9", "Rugged Armor Kit: Stamina +5 and Armor +40".
+   The name comes from the enchanter's formula ("Enchant Bracer - Superior Strength") or the item (kit, scope, arcanum). */
+function enchantEffect(en){ return en.n.replace(/^Enchant: /,""); }
+function enchantName(en){ return (en.title||"").replace(/^Enchant [^-]+? - /,"").trim(); }
+function enchantText(en){
+  let n=enchantName(en); const e=enchantEffect(en);
+  if(!n) return e;
+  if(e.toLowerCase().includes(n.toLowerCase())) n=(en.title||n).trim();   // "Strength" says nothing new, so use "Enchant 2H Weapon - Strength"
+  return n===e?e:`${n}: ${e}`;
+}
+const ST_TEXT={wdmg:"weapon damage",rwdmg:"ranged weapon damage",sp:"spell damage and healing",spd:"spell damage",heal:"healing",scrit:"% spell crit",crit:"% crit",hit:"% hit",shit:"% spell hit",
+  mp5:"mana every 5 sec",ap:"attack power",rap:"ranged attack power",sp_fire:"Fire spell damage",sp_frost:"Frost spell damage",sp_arcane:"Arcane spell damage",sp_shadow:"Shadow spell damage",
+  sp_nature:"Nature spell damage",sp_holy:"Holy spell damage",str:"Strength",agi:"Agility",sta:"Stamina",int:"Intellect",spi:"Spirit",armor:"Armor",def:"Defense",dodge:"% dodge",block:"% block"};
+function statText(st){ return Object.entries(st||{}).map(([k,v])=>ST_TEXT[k]?(ST_TEXT[k][0]==="%"?`+${v}${ST_TEXT[k]}`:`+${v} ${ST_TEXT[k]}`):null).filter(Boolean).join(", "); }
 /* Temporary weapon enhancements (sharpening stones, weightstones, oils, poisons, shaman imbues, imbue scrolls).
    They don't touch the permanent enchant: a weapon can have one enchant AND one temporary enhancement.
    A new temporary one replaces the old temporary one. */
@@ -1242,7 +1283,8 @@ function tempOn(state,slot,it){
   const t=TEMP_BY_ID[id]; if(!t||!tempFits(t,it)||!tempAvail(t,state).ok) return null;
   return t;
 }
-function tempText(t){ return t.n; }
+function tempEffect(t){ const e=statText(t.st); return e||(t.desc?t.desc.replace(/\s*Lasts? (?:for )?\d+.*$/i,"").slice(0,90):""); }
+function tempText(t){ const e=tempEffect(t); return e?`${t.n}: ${e}`:t.n; }
 /* One enchantment per item. Enchants, armor kits, spikes, scopes, arcanums and shoulder enchants all share
    that one spot, so applying any of them replaces whatever was there. */
 function applyEnchant(slot,id){
@@ -1311,7 +1353,7 @@ function renderTempPicker(el,slot){
     <div class="note" style="margin-bottom:6px">Stones, oils, poisons, imbues and coatings go on top of the enchant instead of replacing it. One at a time per weapon: a new one replaces the old one. Ones that only work as on-hit effects are listed, but the stat sheet can't count them.${curT?` Now: <span class="ench temp">${esc(tempText(curT))}</span> <button class="btn small ghost" id="tpRemove">Remove</button>`:""}</div>
     <div class="pk-list">${shown.map(({t,av,d})=>`<button class="pk-row en-row ${curT&&curT.id===t.id?"on":""} ${av.ok?"":"locked"}" data-tp="${t.id}" ${av.ok?"":"disabled"}>
       <span class="en-mark" aria-hidden="true"></span>
-      <span class="pk-nm"><b class="ench temp">${esc(t.n)}</b><small>${esc(TEMP_KIND[t.kind]||"")}${t.rl>1?` · Req ${t.rl}`:""} · ${esc(av.ok?av.how:av.why)}${t.proc?" · on-hit effect, not counted":""}${curT&&curT.id!==t.id&&av.ok?` · <span class="muted">replaces ${esc(tempText(curT))}</span>`:""}</small>${t.desc?`<small class="pk-st">${esc(t.desc)}</small>`:""}</span>
+      <span class="pk-nm"><b class="ench temp">${esc(t.n)}${statText(t.st)?`: ${esc(statText(t.st))}`:""}</b><small>${esc(TEMP_KIND[t.kind]||"")}${t.rl>1?` · Req ${t.rl}`:""} · ${esc(av.ok?av.how:av.why)}${t.proc?" · on-hit effect, not counted":""}${curT&&curT.id!==t.id&&av.ok?` · <span class="muted">replaces ${esc(tempText(curT))}</span>`:""}</small>${t.desc?`<small class="pk-st">${esc(t.desc)}</small>`:""}</span>
       <span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(role==="tank"?2:1)}<small>${unit}</small></span></button>`).join("")||`<div class="empty">Nothing you can use right now.</div>`}</div>`;
   const rm=el.querySelector("#tpRemove"); if(rm) rm.onclick=()=>{ delete S.temps[slot]; S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); };
   el.querySelectorAll("[data-tp]").forEach(b=>b.onclick=()=>{ const t=TEMP_BY_ID[b.dataset.tp]; const old=curT; S.temps=S.temps||{}; S.temps[slot]=t.id; S.example=false; persist();
@@ -1514,6 +1556,7 @@ function itemTip(it,equipped){
   if(equipped && (it.b===1||it.b===2||it.b===3)) h+=`<div class="n">Soulbound</div>`;
   else if(it.b) h+=`<div class="n">${BIND_TEXT[it.b]}</div>`;
   if(it.u) h+=`<div class="n">${it.ug?`Unique-Equipped: ${esc(it.ug)} (1)`:"Unique"}</div>`;
+  if(it.qo) h+=`<div class="q" style="color:var(--amber)">${myQuests(it).length>1?`Quest reward only (${myQuests(it).length} quests give it). Each quest gives one reward once, so every piece you wear from these quests needs its own quest.`:`Quest reward only: one per character, and no other reward from ${esc(it.qn&&it.qn[0]||"that quest")} alongside it.`}</div>`;
   const slotName={1:"Head",2:"Neck",3:"Shoulder",4:"Shirt",5:"Chest",6:"Waist",7:"Legs",8:"Feet",9:"Wrist",10:"Hands",11:"Finger",12:"Trinket",13:"One-Hand",14:"Off Hand",15:"Ranged",16:"Back",17:"Two-Hand",19:"Tabard",20:"Chest",21:"Main Hand",22:"Off Hand",23:"Held In Off-hand",25:"Thrown",26:"Ranged",28:"Relic"}[it.inv]||"";
   h+=`<div class="cost"><span>${slotName}</span><span>${esc(it.t&&it.t!=="Miscellaneous"?it.t.replace(/^(One|Two)-Hand /,""):"")}</span></div>`;
   if(it.w) h+=`<div class="cost"><span>${it.w.min} - ${it.w.max}${it.w.school?" "+esc(it.w.school):""} Damage</span><span>Speed ${it.w.spd.toFixed(2)}</span></div><div class="n">(${(((it.w.min+it.w.max)/2)/it.w.spd).toFixed(1)} damage per second)</div>`;
@@ -1559,7 +1602,7 @@ function equip(slot,id){
   if(slot==="Main Hand" && it.inv===17) S.gear["Off Hand"]={};           // two-hander frees the off hand
   if(slot==="Off Hand"){ const mh=itemFor(S,"Main Hand"); if(mh&&mh.inv===17) S.gear["Main Hand"]={}; }
   const clash=uniqueClash(it,slot,S);
-  if(clash){ S.gear[clash.slot]={}; toast(`${it.n} is ${it.ug?`Unique-Equipped (${it.ug})`:"Unique"}, so ${clash.it.id===it.id?"it":clash.it.n} came off ${clash.slot}.`); }
+  if(clash){ S.gear[clash.slot]={}; toast(`${it.n} is ${clash.why}, so ${clash.it.id===it.id?"the other copy":clash.it.n} came off ${clash.slot}.`); }
   S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel();
 }
 function unequip(slot){ S.gear[slot]={}; persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel(); }
@@ -1596,7 +1639,7 @@ function slotBtn(slot){
   const label=slot.replace(" / Relic","");
   return `<button class="gslot ${ui.slot===slot?"on":""}" data-slot="${slot}" aria-label="${slot}${it?": "+esc(it.n):", empty"}">
     <span class="gi" style="${it?`border-color:${QCOL[it.q]}`:""}">${it?`<img src="${IICON(it.ic)}" alt="">`:`<span class="gempty">${esc(label.slice(0,2))}</span>`}</span>
-    <span class="gn"><small>${esc(label)}</small><b style="color:${it?QCOL[it.q]:"var(--faint)"}">${it?esc(it.n):legacy?esc(legacy):"Empty"}</b>${gone?`<em class="over">The item that was here is no longer in Forever's item list</em>`:""}${it&&!isActive(it)?`<em class="over">Not confirmed in Forever, not counted</em>`:it&&it.lv>(+S.char.level||60)?`<em class="over">Requires level ${reqText(it)}, not counted</em>`:""}${(()=>{ const en=it&&enchantOn(S,slot,it); return en?`<em class="ench">${esc(enchantText(en))}</em>`:""; })()}${(()=>{ const t=it&&tempOn(S,slot,it); return t?`<em class="ench temp">+ ${esc(tempText(t))} (temporary)</em>`:""; })()}</span></button>`;
+    <span class="gn"><small>${esc(label)}</small><b style="color:${it?QCOL[it.q]:"var(--faint)"}">${it?esc(it.n):legacy?esc(legacy):"Empty"}</b>${gone?`<em class="over">The item that was here is no longer in Forever's item list</em>`:""}${it&&slot==="Off Hand"&&offHandBlocked(S)?`<em class="over">Can't be held with a two-handed weapon, not counted</em>`:it&&!isActive(it)?`<em class="over">Not confirmed in Forever, not counted</em>`:it&&it.lv>(+S.char.level||60)?`<em class="over">Requires level ${reqText(it)}, not counted</em>`:""}${(()=>{ const en=it&&enchantOn(S,slot,it); return en?`<em class="ench">${esc(enchantText(en))}</em>`:""; })()}${(()=>{ const t=it&&tempOn(S,slot,it); return t?`<em class="ench temp">+ ${esc(tempText(t))} (temporary)</em>`:""; })()}</span></button>`;
 }
 function renderGearDoll(){
   const L=qs("#dollL"), R=qs("#dollR"), Bt=qs("#dollB"); if(!L) return;
@@ -1638,7 +1681,7 @@ function renderPicker(focus){
   el.innerHTML=`<div class="pk-head"><div><span class="eyebrow">${esc(slot)}</span>
       ${cur?`<div class="pk-cur"><img src="${IICON(cur.ic)}" alt=""><div><b style="color:${QCOL[cur.q]}">${esc(cur.n)}</b><small>${cur.il} ilvl · ${esc(statLine(cur,6))||"No stats"}</small></div></div>`:`<div class="muted">Nothing equipped${blocked?" (your two-handed weapon uses this slot)":""}.</div>`}</div>
       ${cur?`<button class="btn small ghost" id="unequip">Remove</button>`:""}</div>
-    <div class="seg" role="tablist" aria-label="Choose"><button role="tab" data-pm="items" aria-selected="${(ui.pm||"items")==="items"}">Items</button><button role="tab" data-pm="ench" aria-selected="${ui.pm==="ench"}" ${cur?"":"disabled"}>Enchant${(()=>{ const en=cur&&enchantOn(S,slot,cur); return en?`: <span class="ench">${esc(enchantText(en))}</span>`:""; })()}</button></div>
+    <div class="seg" role="tablist" aria-label="Choose"><button role="tab" data-pm="items" aria-selected="${(ui.pm||"items")==="items"}">Items</button><button role="tab" data-pm="ench" aria-selected="${ui.pm==="ench"}" ${cur?"":"disabled"} title="${(()=>{ const en=cur&&enchantOn(S,slot,cur); return en?"Enchant: "+esc(enchantText(en)):"Enchant"; })()}">Enchant${(()=>{ const en=cur&&enchantOn(S,slot,cur); return en?`: <span class="ench">${esc(enchantText(en))}</span>`:""; })()}</button></div>
     <div id="pkEnch" ${ui.pm==="ench"&&cur?"":"hidden"}></div>
     <div id="pkItems" ${ui.pm==="ench"&&cur?"hidden":""}>
     <div class="pk-tools">
@@ -1678,7 +1721,11 @@ function renderPickerList(){
   if(sort==="best"){
     const base=f(compute(S)); const cur=S.gear[slot];
     // score the top candidates by item level first so the list stays fast
-    list=list.sort((a,b)=>b.il-a.il).slice(0,400).map(it=>{ S.gear[slot]={id:it.id}; const d=f(compute(S))-base; return {it,d}; });
+    const oh=S.gear["Off Hand"], mh=S.gear["Main Hand"];
+    list=list.sort((a,b)=>b.il-a.il).slice(0,400).map(it=>{ S.gear[slot]={id:it.id};
+      if(slot==="Main Hand"&&isTwoHand(it)) S.gear["Off Hand"]={};              // a two-hander means no off hand
+      if(slot==="Off Hand"&&offHandBlocked(S)) S.gear["Main Hand"]={};           // an off hand means the two-hander comes off
+      const d=f(compute(S))-base; S.gear["Off Hand"]=oh; S.gear["Main Hand"]=mh; return {it,d}; });
     S.gear[slot]=cur;
     list.sort((a,b)=>b.d-a.d||b.it.il-a.it.il);
   } else {
@@ -1689,7 +1736,7 @@ function renderPickerList(){
   const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
   el.innerHTML=shown.length?shown.map(({it,d})=>`<button class="pk-row ${it.id===curId?"on":""}" role="option" aria-selected="${it.id===curId}" data-id="${it.id}">
       <img src="${IICON(it.ic)}" alt="" loading="lazy" style="border-color:${QCOL[it.q]}">
-      <span class="pk-nm"><b style="color:${QCOL[it.q]}">${esc(it.n)}</b><small>${it.il} ilvl${it.rl>1?` · Req ${reqText(it)}`:""}${it.b?` · ${BIND_SHORT[it.b]}`:""}${it.u?" · Unique":""}${it.t&&it.t!=="Miscellaneous"?" · "+esc(it.t):""}${it.set?" · "+esc(it.set):""}${it.cr?` · <span class="crafted">Crafted: ${esc(it.cr.p)}${it.cr.r!=null?` ${it.cr.r}`:""}</span>`:it.src&&it.src[0]?` · <span class="${it.src[0].l==="k"?"unconf":"srcl"}">${esc(it.src[0].t)}</span>`:""}</small>${(()=>{ const av=itemAvail(it); const cl=uniqueClash(it,slot,S); return !av.ok?`<small class="bad">${esc(av.why)}</small>`:!canUse(it,S)?`<small class="bad">${esc(it.cl?"Classes: "+it.cl.join(", "):it.rc?"Races: "+it.rc.join(", "):`${S.char.cls}s can't use this`)}</small>`:it.lv>lvl?`<small class="bad">Requires level ${reqText(it)}</small>`:cl?`<small class="bad">${it.ug?"Unique-Equipped":"Unique"}: already worn in ${esc(cl.slot)} (equipping here moves it)</small>`:`<small class="pk-st">${esc(statLine(it))}</small>`; })()}</span>
+      <span class="pk-nm"><b style="color:${QCOL[it.q]}">${esc(it.n)}</b><small>${slot==="Main Hand"&&isTwoHand(it)?`<span class="muted">Two-Hand${itemFor(S,"Off Hand")?" (frees your off hand)":""}</span> · `:""}${it.il} ilvl${it.rl>1?` · Req ${reqText(it)}`:""}${it.b?` · ${BIND_SHORT[it.b]}`:""}${it.u?" · Unique":""}${it.t&&it.t!=="Miscellaneous"?" · "+esc(it.t):""}${it.set?" · "+esc(it.set):""}${it.cr?` · <span class="crafted">Crafted: ${esc(it.cr.p)}${it.cr.r!=null?` ${it.cr.r}`:""}</span>`:it.src&&it.src[0]?` · <span class="${it.src[0].l==="k"?"unconf":"srcl"}">${esc(it.src[0].t)}</span>`:""}</small>${(()=>{ const av=itemAvail(it); const cl=uniqueClash(it,slot,S); const th=slot==="Off Hand"&&offHandBlocked(S); return th&&av.ok&&canUse(it,S)?`<small class="bad">Your two-handed weapon uses both hands: equipping this takes it off</small>`:!av.ok?`<small class="bad">${esc(av.why)}</small>`:!canUse(it,S)?`<small class="bad">${esc(it.cl?"Classes: "+it.cl.join(", "):it.rc?"Races: "+it.rc.join(", "):`${S.char.cls}s can't use this`)}</small>`:it.lv>lvl?`<small class="bad">Requires level ${reqText(it)}</small>`:cl?`<small class="bad">${cl.it.id===it.id?`${esc(cl.why[0].toUpperCase()+cl.why.slice(1))}: already worn in ${esc(cl.slot)} (equipping here moves it)`:`Same quest as ${esc(cl.it.n)} in ${esc(cl.slot)}: equipping this takes it off`}</small>`:`<small class="pk-st">${esc(statLine(it))}</small>`; })()}</span>
       ${d!==null?`<span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(role==="tank"?2:1)}<small>${unit}</small></span>`:""}
     </button>`).join("")+(total>shown.length?`<div class="note" style="padding:8px 10px">Showing ${shown.length} of ${total}. Type to narrow the list.</div>`:"")
     :`<div class="empty">No ${esc(slot.toLowerCase())} items match. Try clearing the search or unticking a filter.</div>`;
@@ -1717,7 +1764,7 @@ function modelItems(){
     const it=itemFor(S,slot); if(!it||!it.dsp) continue;
     let s=it.inv===20?20:vs;   // robes use their own model slot
     if(slot==="Main Hand") s=it.inv===17?17:21;
-    if(slot==="Off Hand") s=it.inv===14?14:it.inv===23?23:22;
+    if(slot==="Off Hand"){ if(offHandBlocked(S)) continue; s=it.inv===14?14:it.inv===23?23:22; }
     if(slot==="Ranged / Relic"){ if(it.inv===28) continue; s=it.inv; }
     out.push({slot:s,display:it.dsp});
   }
@@ -1777,16 +1824,30 @@ function autoEnchant(role){
     for(const t of CRAFT.temps||[]){ if(t.proc||!tempFits(t,it)||!tempAvail(t).ok) continue; S.temps[sl]=t.id; const v=f(compute(S)); if(v>bv+0.01){bv=v;best=t;} }
     if(best) S.temps[sl]=best.id; else if(cur0!=null) S.temps[sl]=cur0; else delete S.temps[sl]; }
 }
+function autoCands(slot,filt){
+  return slotCandidates(slot,S).filter(it=>canUse(it,S)&&it.lv<=S.char.level&&it.q<=4&&itemAvail(it).ok&&(!AUTO_SRC||srcOk(it,AUTO_SRC))&&!(AUTO_NO_RAID&&(it.raid||(it.pvp||0)>=12||it.il>65))&&(!filt||filt(it))).sort((a,b)=>b.il-a.il).slice(0,250);
+}
+function autoPick(slot,f,keep,filt){
+  const cur=(S.gear[slot]||{}).id; let best=null,bv=-Infinity;
+  if(keep&&cur&&isActive(ITEM_BY_ID[cur])&&(!filt||filt(ITEM_BY_ID[cur]))){ best=ITEM_BY_ID[cur]; bv=f(compute(S))+best.il*1e-3; }
+  for(const it of autoCands(slot,filt)){ if(uniqueClash(it,slot,S)) continue; S.gear[slot]={id:it.id}; const v=f(compute(S))+it.il*1e-3; if(v>bv+(keep?0.01:0)){bv=v;best=it;} }
+  S.gear[slot]=best?{id:best.id}:{};
+  return best;
+}
 function autoEquip(role,keep){ // greedy best-in-slot for the given role; keep = start from what's equipped
   const f=METRIC[role];
   for(const slot of SLOTS){
-    if(slot==="Shirt"||slot==="Tabard") continue;
-    const cands=slotCandidates(slot,S).filter(it=>canUse(it,S)&&it.lv<=S.char.level&&it.q<=4&&itemAvail(it).ok&&(!AUTO_SRC||srcOk(it,AUTO_SRC))&&!(AUTO_NO_RAID&&(it.raid||(it.pvp||0)>=12||it.il>65))).sort((a,b)=>b.il-a.il).slice(0,250);
-    const cur=(S.gear[slot]||{}).id; let best=null,bv=-Infinity;
-    if(keep&&cur&&isActive(ITEM_BY_ID[cur])){ best=ITEM_BY_ID[cur]; bv=f(compute(S))+best.il*1e-3; }
-    for(const it of cands){ if(uniqueClash(it,slot,S)) continue; S.gear[slot]={id:it.id}; const v=f(compute(S))+it.il*1e-3; if(v>bv+(keep?0.01:0)){bv=v;best=it;} }
-    S.gear[slot]=best?{id:best.id}:{};
+    if(slot==="Shirt"||slot==="Tabard"||slot==="Main Hand"||slot==="Off Hand") continue;
+    autoPick(slot,f,keep);
   }
+  // weapons: a two-hander alone vs a one-hander plus an off hand, whichever is better
+  const mh0=S.gear["Main Hand"], oh0=S.gear["Off Hand"];
+  const keep2H=keep&&isTwoHand(itemFor(S,"Main Hand")), keep1H=keep&&!keep2H;
+  S.gear["Off Hand"]={}; if(!keep2H) S.gear["Main Hand"]={};
+  const two=autoPick("Main Hand",f,keep2H,isTwoHand); const v2=two?f(compute(S)):-Infinity;
+  S.gear["Main Hand"]=keep1H?mh0:{}; S.gear["Off Hand"]=keep1H?oh0:{};
+  const one=autoPick("Main Hand",f,keep1H,it=>!isTwoHand(it)); const oh=one?autoPick("Off Hand",f,keep1H):null; const v1=one?f(compute(S)):-Infinity;
+  if(two&&v2>v1){ S.gear["Main Hand"]={id:two.id}; S.gear["Off Hand"]={}; }
 }
 
 /* ---------- "Your character sheet" calibration ---------- */

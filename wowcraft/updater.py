@@ -78,7 +78,7 @@ RACIAL_EFFECTS = {
     "Quickness": [{"k": "dodge", "v": 1}],
     "Savage": [{"k": "melee_crit", "v": 1}, {"k": "ranged_crit", "v": 1}, {"k": "spell_crit", "v": 1}],
     "Endurance": [{"k": "health_pct", "v": 5}],
-    "Wind Blessed": [{"k": "attack_speed_pct", "v": 1}, {"k": "cast_speed_pct", "v": 1}],
+    "Wind Blessed": [{"k": "attack_speed_pct", "v": 3}, {"k": "cast_speed_pct", "v": 3}],
     "Elune's Light": [{"k": "melee_crit", "v": 10}, {"k": "ranged_crit", "v": 10}, {"k": "spell_crit", "v": 10}],
     "Berserking": [{"k": "attack_speed_pct", "v": 10}, {"k": "cast_speed_pct", "v": 10}],
     "Blood Fury": [{"k": "ap_pct", "v": 10}, {"k": "rap_pct", "v": 10}, {"k": "sp_pct", "v": 10}],
@@ -138,9 +138,12 @@ def build_game(src, seed):
             key = RACE_KEYS.get(r["race"], slug(r["race"]))
             racials = []
             for name, text, icon in r["abilities"]:
-                active = bool(re.search(r"\bcooldown\b|^\d+ yd range|^Instant|^Channeled|sec cast", text))
-                cd = re.search(r"(\d+(?:\.\d+)? (?:min|sec)) cooldown", text)
-                racials.append({"name": name, "desc": text, "icon": icon, "type": "active" if active else "passive",
+                # an ability you press starts with its cast info ("Instant, 2 min cooldown." / "0.5 sec cast" /
+                # "Channeled"); a passive that only mentions an internal cooldown (Touch of the Grave) stays passive
+                head = re.match(r"(?:\d+ yd range, )?(Instant|Channeled|\d+(?:\.\d+)? sec cast)\b", text)
+                cd = re.match(r"(?:\d+ yd range, )?(?:Instant|Channeled|\d+(?:\.\d+)? sec cast), (\d+(?:\.\d+)? (?:min|sec)) cooldown", text)
+                racials.append({"name": name, "desc": text, "icon": icon, "type": "active" if head else "passive",
+                                "cast": head.group(1) if head else None,
                                 "cd": cd.group(1) if cd else None, "effects": RACIAL_EFFECTS.get(name, [])})
                 icons.add(icon)
             out["races"].append({"id": key, "name": r["race"], "faction": faction, "icon": r.get("icon"),

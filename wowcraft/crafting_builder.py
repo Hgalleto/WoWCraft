@@ -322,7 +322,7 @@ def build(log=print):
     for spell, eid, rank in recipe_enchants:
         c = entry(eid, spell)
         if c is not None:
-            c["src"].append({"k": "enchanter", "n": names.get(spell, ""), "r": rank})
+            c["src"].append({"k": "enchanter", "n": names.get(spell, ""), "r": rank, "spell": int(spell)})
     for iid, spells in item_spells.items():
         sp = sparse.get(iid)
         if not sp or sp["Display_lang"].startswith(RECIPE_PREFIX) or BAD_RE.search(sp["Display_lang"]):
@@ -375,6 +375,10 @@ def build(log=print):
     jobs = [("item", i) for i in cons_ids]
     jobs += [("item", str(t["id"])) for t in temps if t["src"] == "item"]
     jobs += [("spell", c["spell"]) for c in catalog.values() if not c["st"]]
+    # every way to get each enchant gets checked against Wowhead's Forever database below
+    jobs += [("spell", x["spell"]) for c in catalog.values() for x in c["src"] if x["k"] == "enchanter"]
+    jobs += [("item", str(x["id"])) for c in catalog.values() for x in c["src"] if x["k"] == "item"]
+    jobs = list(dict.fromkeys(jobs))
     log(f"Fetching {len(jobs)} tooltips from Wowhead...")
     with ThreadPoolExecutor(10) as ex:
         for key, d in ex.map(lambda j: tip(*j), jobs):
@@ -407,6 +411,26 @@ def build(log=print):
                     t["st"] = {"scrit": float(mm.group(1))}
                 if t["st"] and not re.search(r"occasionally|chance to|reset|reducing", ds.replace("chance to hit", "").replace("chance to critically", "")):
                     t["proc"] = False
+
+    # Forever only: keep enchant sources (enchanter formulas, scrolls, kits, arcanums...) that Wowhead lists for
+    # WoW Forever. The client tables still carry Season of Discovery and other leftovers that aren't in the game.
+    def in_forever(x):
+        key = f"spell:{x['spell']}" if x["k"] == "enchanter" else f"item:{x['id']}"
+        return bool((cache.get(key) or {}).get("name"))
+    dropped = 0
+    for c in catalog.values():
+        keep = [x for x in c["src"] if in_forever(x)]
+        dropped += len(c["src"]) - len(keep)
+        c["src"] = keep
+    before = len(catalog)
+    catalog = {k: v for k, v in catalog.items() if v["src"]}
+    log(f"Enchants: kept {len(catalog)} that are in WoW Forever, dropped {before - len(catalog)} that aren't "
+        f"({dropped} sources removed).")
+    # the enchant's own name: the enchanter's formula ("Enchant Bracer - Superior Strength") or the item
+    # ("Heavy Armor Kit", "Arcanum of Focus"); the stat text stays in "n"
+    for c in catalog.values():
+        ench_src = [x for x in c["src"] if x["k"] == "enchanter"]
+        c["title"] = (ench_src[0]["n"] if ench_src else c["src"][0]["n"]).strip()
 
     for c in catalog.values():
         d = cache.get(f"spell:{c['spell']}")

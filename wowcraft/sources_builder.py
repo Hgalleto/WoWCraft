@@ -16,7 +16,8 @@ from wowcraft.items_builder import WEB, get, table
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FDB = "https://foreverdb.net/"
-FILES = ("Data/GearSources.lua", "Data/Recipes.lua", "Data/NPCs.lua")
+FILES = ("Data/GearSources.lua", "Data/Recipes.lua", "Data/NPCs.lua", "Data/Items.lua", "Data/Enhance.lua",
+         "Data/Consumables.lua", "Data/Spells.lua")
 REP = {3: "Neutral", 4: "Friendly", 5: "Honored", 6: "Revered", 7: "Exalted"}
 SIDE = {"a": " (Alliance)", "h": " (Horde)"}
 # battleground reputations count as PvP: League of Arathor, Defilers, Frostwolf, Stormpike, Warsong Outriders, Silverwing
@@ -107,6 +108,7 @@ def build(log=print):
         return None
 
     sources, raid_items, pvp_rank, cats, side, confirmed = {}, set(), {}, {}, {}, set()
+    quest_only = {}  # item -> {quest id: quest name}, for gear you can only get as a quest reward
     for line in body.split("\n"):
         f = line.split("|")
         if len(f) < 8:
@@ -121,6 +123,9 @@ def build(log=print):
         if not f[7]:
             continue
         lst, seen, cat = [], set(), set()
+        srcs = [x.split("^") for x in f[7].split("~") if x]
+        if srcs and all(x[0] == "q" and len(x) > 2 for x in srcs):
+            quest_only[iid] = {x[1]: (x[2], x[4] if len(x) > 5 else "") for x in srcs}
         for s in f[7].split("~"):
             parts = s.split("^")
             k = parts[0]
@@ -209,6 +214,15 @@ def build(log=print):
             it["cat"] = "".join(sorted(cat))
         else:
             it.pop("cat", None)
+        # quest-only gear: one copy per quest (and two rewards from the same quest can't both be had)
+        if it["id"] in quest_only:
+            it["qo"] = sorted(quest_only[it["id"]])
+            it["qn"] = [quest_only[it["id"]][q][0] for q in it["qo"]]
+            it["qf"] = [quest_only[it["id"]][q][1] for q in it["qo"]]  # "a"/"h" = one faction's version of the quest
+        else:
+            it.pop("qo", None)
+            it.pop("qn", None)
+            it.pop("qf", None)
         if it["id"] in side:
             it["fx"] = side[it["id"]]
         else:
@@ -228,6 +242,59 @@ def build(log=print):
 
     cpath = os.path.join(WEB, "crafting.json")
     cdb = json.load(open(cpath, encoding="utf-8"))
+
+    # ---- Forever only. The client tables still hold Classic and Season of Discovery leftovers, so an enchant, armor
+    # kit, stone, oil, poison, imbue or consumable stays only if ForeverDB's Forever data has it: Forever's recipe
+    # lists, its item facts, its enchant list, its consumable list (minus Season of Discovery leftovers) or the class
+    # spells trainers teach in Forever.
+    recipe_spells = {int(m) for m in re.findall(r'\{(\d+),"(?:[^"\\]|\\.)*",\d+,', rbody)}
+    recipe_items = set(recipes)
+    itl = data["Data/Items.lua"]
+    forever_items = {int(x) for x in re.findall(r'\[(\d+)\]="', itl[itl.index("ns.items"):])}
+    enh = data["Data/Enhance.lua"]
+    enh_info = dict(re.findall(r'\["([is]\d+)"\]="([^"]*)"', enh[enh.index("ns.gfEnhInfo"):]))
+    cons_rows = re.findall(r'\{(\d+),"((?:[^"\\]|\\.)*)","([^"]*)","((?:[^"\\]|\\.)*)",(\d+),([\d.]+),(\d+),(\d+),(\d+)\}',
+                           data["Data/Consumables.lua"])
+    forever_cons = {int(r[0]) for r in cons_rows if r[8] != "1"}
+    sod_cons = {int(r[0]) for r in cons_rows if r[8] == "1"}
+    shaman = {}
+    sp_txt = data["Data/Spells.lua"]
+    m = re.search(r"SHAMAN=\{(.*?)\}\}", sp_txt, re.S)
+    for lvl, nm, rank, spell in re.findall(r'\{(\d+),"([^"]*)","([^"]*)",(\d+),', m.group(1) if m else ""):
+        shaman[int(spell)] = (int(lvl), nm, rank)
+
+    def src_ok(x):
+        if x["k"] == "enchanter":
+            return x.get("spell") in recipe_spells or f"s{x.get('spell')}" in enh_info
+        return x["id"] in recipe_items or x["id"] in forever_items or x["id"] in forever_cons or f"i{x['id']}" in enh_info
+
+    n0 = len(cdb.get("enchants", []))
+    for en in cdb.get("enchants", []):
+        en["src"] = [x for x in en["src"] if src_ok(x)]
+        for x in en["src"]:  # ForeverDB's own name for the item when it has one ("Rugged Armor Kit")
+            key = f"s{x['spell']}" if x["k"] == "enchanter" else f"i{x['id']}"
+            if key in enh_info:
+                x["n"] = enh_info[key].split("|")[0] or x["n"]
+        if en["src"]:
+            es = [x for x in en["src"] if x["k"] == "enchanter"]
+            en["title"] = (es[0]["n"] if es else en["src"][0]["n"]).strip()
+    cdb["enchants"] = [en for en in cdb.get("enchants", []) if en["src"]]
+    t0 = len(cdb.get("temps", []))
+    temps = []
+    for t in cdb.get("temps", []):
+        if t["src"] == "spell":
+            info = shaman.get(-t["id"])
+            if not info:
+                continue
+            t["rl"], t["n"] = info[0], f"{info[1]} ({info[2]})" if info[2] else info[1]
+        elif t["id"] in sod_cons or not (t["id"] in forever_cons or t["id"] in forever_items or t["id"] in recipe_items):
+            continue
+        temps.append(t)
+    cdb["temps"] = sorted(temps, key=lambda t: (t["kind"], t["rl"], t["n"]))
+    c0 = len(cdb.get("consumables", []))
+    cdb["consumables"] = [c for c in cdb.get("consumables", []) if c["id"] in forever_cons]
+    log(f"Forever check: kept {len(cdb['enchants'])} of {n0} enchants, {len(cdb['temps'])} of {t0} temporary weapon "
+        f"enhancements, {len(cdb['consumables'])} of {c0} consumables.")
     for c in cdb.get("consumables", []):
         ri = recipe_info(c["id"])
         if ri:

@@ -5,64 +5,76 @@
   "first": "Zephyr",
   "last": "Cadavera",
   "faction": "Horde",
-  "race": "undead",
-  "cls": "Paladin",
-  "level": 10,
+  "race": "skyborne",
+  "cls": "Druid",
+  "level": 30,
   "locked": true,
-  "spec": 0,
+  "spec": 2,
   "gender": "male"
  },
  "talents": {
-  "retribution_benediction": 1
+  "restoration_nature_s_focus": 5,
+  "restoration_naturalist": 5,
+  "restoration_reflection": 3,
+  "restoration_gift_of_nature": 5,
+  "restoration_gift_of_the_earthmother": 1,
+  "restoration_improved_rejuvenation": 1,
+  "restoration_swiftmend": 1
  },
  "gear": {
   "Head": {
-   "id": 3732
+   "id": 4322
   },
   "Neck": {
-   "id": 279837
+   "id": 272075
   },
   "Shoulder": {
-   "id": 270039
+   "id": 7684
   },
   "Back": {
-   "id": 279835
+   "id": 274149
   },
   "Chest": {
-   "id": 6503
+   "id": 7065
   },
-  "Shirt": {},
+  "Shirt": {
+   "id": 4336
+  },
   "Tabard": {},
   "Wrist": {
-   "id": 2032
+   "id": 273036
   },
   "Hands": {
-   "id": 16741
+   "id": 7348
   },
   "Waist": {
-   "id": 251962
+   "id": 273039
   },
   "Legs": {
    "id": 270031
   },
   "Feet": {
-   "id": 279840
+   "id": 4320
   },
   "Finger 1": {
-   "id": 270051
+   "id": 281635
   },
   "Finger 2": {
-   "id": 270051
+   "id": 281635
   },
-  "Trinket 1": {},
-  "Trinket 2": {},
+  "Trinket 1": {
+   "id": 260802
+  },
+  "Trinket 2": {
+   "id": 273643
+  },
   "Main Hand": {
-   "id": 277288
+   "id": 281312
   },
-  "Off Hand": {
-   "id": 3743
-  },
-  "Ranged / Relic": {}
+  "Off Hand": {},
+  "Ranged / Relic": {
+   "id": 249396
+  }
  },
  "baseOverride": null,
  "other": {
@@ -72,7 +84,7 @@
  "settings": {
   "target": 63,
   "role": "auto",
-  "srcCats": "dw"
+  "srcCats": "dwupcr"
  },
  "prof": {
   "p1": "Herbalism",
@@ -86,15 +98,18 @@
  },
  "cons": [],
  "enchants": {
-  "Head": 2591,
   "Shoulder": 2604,
-  "Chest": 1893,
+  "Chest": 8492,
   "Wrist": 2566,
   "Hands": 2617,
-  "Legs": 2591,
   "Feet": 8492,
-  "Main Hand": 2505,
+  "Main Hand": 8212,
   "Neck": 8219,
-  "Off Hand": 7664
+  "Off Hand": 7659,
+  "Legs": 2590,
+  "Head": 2590
+ },
+ "temps": {
+  "Main Hand": 287980
  }
 }
