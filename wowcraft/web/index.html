@@ -1566,7 +1566,7 @@ function unequip(slot){ S.gear[slot]={}; persist(); renderPlate(); renderGearDol
 
 function renderGear(v){
   if(!S.char.cls){ v.innerHTML=`<div class="empty">Create your character first.</div>`; return; }
-  if(!ITEMS.length){ v.innerHTML=`<div class="empty">The gear database (items.json) is missing. Run “py WoWCraft.pyw --update-items” while online.</div>`; return; }
+  if(!ITEMS.length){ v.innerHTML=`<div class="empty">The gear database isn't built yet. If this is a fresh copy, WoWCraft is building it now (a few minutes, needs internet): watch the Updates tab, then reload. Otherwise press Update everything on the Updates tab.</div>`; return; }
   if(!SLOTS.includes(ui.slot)) ui.slot="Head";
   v.innerHTML=`<div class="armory">
     <section class="frame doll">

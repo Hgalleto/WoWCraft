@@ -36,6 +36,10 @@ Needs Python 3.9+ (python.org, or `winget install Python.Python.3.12`). Nothing 
 - **Updates**: one place to keep the data current as Forever changes. Each part has its own button: **Everything** (races, classes, talents, specializations, class stats, all gear with its class and race limits, professions and sources in one go), **Races, classes & talents**, **Gear & items**, **Professions & crafting**, **Item sources** and **Class stat tables**. Updates only process changes: new things are added, things Forever no longer has are removed, changed things are replaced, and nothing is duplicated. Item tooltips are only re-downloaded for items that are new or whose Forever client data changed (tick **Full re-check** to ask about every item). WoWCraft also picks up new Forever client builds on its own. When an update finishes you get a list of what was added, removed and changed, then **Reload** to use it. Saved builds aren't touched; a piece of gear that's been removed from Forever just shows as empty.
 - **Saved Builds & Compare**: saves each build as a file in `builds\`, ranks your builds for a role, compares up to 3 side by side, and copies or imports build codes.
 
+## Getting it from GitHub
+
+Clone or download the repository, then double-click **Launch WoWCraft.bat**. The repository only holds WoWCraft's own code, so the first launch downloads the talent data and artwork, then builds the gear, profession and stat databases in the background (a few minutes, needs an internet connection). You can watch it on the **Updates** tab, then reload. Your saved builds stay on your PC and never go to GitHub (`.gitignore` leaves out `builds\`, the artwork and all downloaded data).
+
 ## Your data
 
 - Saved builds: `builds\*.json` (one file per build; OneDrive syncs them).
@@ -51,7 +55,9 @@ Use the **Updates** tab (see above). WoWCraft also checks for new talent data wh
 
 From a terminal: `py WoWCraft.pyw --update` (talents), `py WoWCraft.pyw --update-items` (gear, professions and sources), `py WoWCraft.pyw --update-all` (everything). Add `--full` to re-check every item.
 
-## Credits
+## License and credits
+
+WoWCraft's code is under the MIT License (see `LICENSE`). The game data and artwork it downloads keep their own licenses:
 
 Talent, racial and tooltip data: [talentsforever.com](https://talentsforever.com) data export, CC BY 4.0, read from the WoW Forever beta client.
 Item stats and icons: Wowhead's WoW Forever item tooltips (https://www.wowhead.com/forever/items), with the item list and appearances from the WoW Forever client tables via wago.tools (build 1.60.1.70532).

@@ -1,0 +1,35 @@
+# WoWCraft .gitignore
+# Only the app's own code goes on GitHub. Everything below is either personal,
+# third-party content, or rebuilt by the app (Updates tab > Update everything,
+# or: py WoWCraft.pyw --update-all). A fresh clone builds it on first launch.
+
+# Your characters and settings
+builds/
+
+# Blizzard artwork (icons, tree backgrounds), downloaded by the app
+wowcraft/web/assets.zip
+wowcraft/web/assets/*
+!wowcraft/web/assets/js/
+wowcraft/web/assets/.unpacked
+
+# Built data (from talentsforever.com, Wowhead, wago.tools and ForeverDB.net)
+wowcraft/web/*.json
+
+# Downloaded caches and source data
+wowcraft/data/*
+!wowcraft/data/effects_seed.json
+!wowcraft/data/spec_builds_seed.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.tmp
+*.part
+
+# Editors and OS clutter
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

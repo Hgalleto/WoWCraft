@@ -155,6 +155,11 @@ def main():
     ensure_art(log)
 
     srv, url = server.start(PORT)
+    if not os.path.exists(os.path.join(updater.WEB_DIR, "items.json")):
+        # fresh copy (e.g. cloned from GitHub): build the gear, profession and stat data in the background.
+        # Progress shows on the Updates tab.
+        from wowcraft import update_manager
+        update_manager.start("everything")
 
     if "--browser" not in args:
         try:
