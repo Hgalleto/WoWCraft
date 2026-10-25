@@ -1,0 +1,964 @@
+{
+ "Hunter|Unleashed Fury": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "pet_dmg_pct",
+    "v": [
+     4,
+     8,
+     12,
+     16,
+     20
+    ]
+   }
+  ]
+ },
+ "Hunter|Bestial Discipline": {
+  "max": 2,
+  "effects": [
+   {
+    "k": "casting_regen_pct",
+    "v": [
+     25,
+     50
+    ]
+   }
+  ]
+ },
+ "Hunter|Lethal Attacks": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "k": "ranged_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Hunter|Ranged Weapon Specialization": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "ranged_dmg_pct",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Hunter|Deflection": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "parry",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Hunter|Survivalist": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "health_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Hunter|Surefooted": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "melee_hit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "k": "ranged_hit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Hunter|Lightning Reflexes": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "agi_pct",
+    "v": [
+     3,
+     6,
+     9,
+     12,
+     15
+    ]
+   }
+  ]
+ },
+ "Warrior|Deflection": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "parry",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Warrior|Two-Handed Weapon Specialization": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "twohand_dmg_pct",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Warrior|Cruelty": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Warrior|Dual Wield Specialization": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "offhand_dmg_pct",
+    "v": [
+     5,
+     10,
+     15,
+     20,
+     25
+    ]
+   }
+  ]
+ },
+ "Warrior|Shield Specialization": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "block",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Warrior|Defiance": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "threat_pct",
+    "v": [
+     5,
+     10,
+     15
+    ]
+   }
+  ]
+ },
+ "Rogue|Malice": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Rogue|Lethality": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "crit_dmg_bonus_pct",
+    "v": [
+     6,
+     12,
+     18,
+     24,
+     30
+    ]
+   }
+  ]
+ },
+ "Rogue|Lightning Reflexes": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "dodge",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Rogue|Deflection": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "parry",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Rogue|Precision": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "melee_hit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Rogue|Dual Wield Specialization": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "offhand_dmg_pct",
+    "v": [
+     10,
+     20,
+     30,
+     40,
+     50
+    ]
+   }
+  ]
+ },
+ "Priest|Meditation": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "casting_regen_pct",
+    "v": [
+     10,
+     20,
+     30
+    ]
+   }
+  ]
+ },
+ "Priest|Spiritual Guidance": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "spellpower_from_spi_pct",
+    "v": [
+     5,
+     10,
+     15,
+     20,
+     25
+    ]
+   }
+  ]
+ },
+ "Priest|Dark Inspiration": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "spi_pct",
+    "v": [
+     3,
+     6,
+     9,
+     12,
+     15
+    ]
+   }
+  ]
+ },
+ "Priest|Darkness": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "shadow_dmg_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Mage|Magic Absorption": {
+  "max": 2,
+  "effects": [
+   {
+    "k": "resist_all",
+    "v": [
+     5,
+     10
+    ]
+   }
+  ]
+ },
+ "Mage|Arcane Meditation": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "casting_regen_pct",
+    "v": [
+     10,
+     20,
+     30
+    ]
+   }
+  ]
+ },
+ "Mage|Arcane Mind": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "mana_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Mage|Arcane Instability": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "spell_dmg_pct",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "k": "spell_crit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Mage|Fire Power": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "fire_dmg_pct",
+    "v": [
+     2,
+     4,
+     6
+    ]
+   }
+  ]
+ },
+ "Mage|Piercing Ice": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "frost_dmg_pct",
+    "v": [
+     2,
+     4,
+     6
+    ]
+   }
+  ]
+ },
+ "Druid|Nature's Majesty": {
+  "max": 2,
+  "effects": [
+   {
+    "k": "spell_crit",
+    "v": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "Druid|Vengeance": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "spell_crit_dmg_bonus_pct",
+    "v": [
+     20,
+     40,
+     60,
+     80,
+     100
+    ]
+   }
+  ]
+ },
+ "Druid|Moonfury": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "arcane_dmg_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   },
+   {
+    "k": "nature_dmg_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Druid|Heart of the Wild": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "int_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Druid|Thick Hide": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "armor_items_pct",
+    "v": [
+     3,
+     7,
+     10
+    ]
+   }
+  ]
+ },
+ "Druid|Sharpened Claws": {
+  "max": 2,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ "Druid|Natural Reaction": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "dodge",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Druid|Naturalist": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "phys_dmg_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Druid|Reflection": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "casting_regen_pct",
+    "v": [
+     5,
+     10,
+     15
+    ]
+   }
+  ]
+ },
+ "Druid|Gift of Nature": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "healing_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Druid|Living Spirit": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "spi_pct",
+    "v": [
+     5,
+     10,
+     15
+    ]
+   }
+  ]
+ },
+ "Warlock|Shadow Mastery": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "shadow_dmg_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Warlock|Demonic Embrace": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "sta_pct",
+    "v": [
+     3,
+     6,
+     9,
+     12,
+     15
+    ]
+   }
+  ]
+ },
+ "Warlock|Unholy Power": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "pet_dmg_pct",
+    "v": [
+     4,
+     8,
+     12,
+     16,
+     20
+    ]
+   }
+  ]
+ },
+ "Paladin|Divine Strength": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "str_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Paladin|Divine Intellect": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "int_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Paladin|Toughness": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "armor_items_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Paladin|Precision": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "melee_hit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "k": "spell_hit",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Paladin|Shield Specialization": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "block",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Paladin|Deflection": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "parry",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Paladin|Conviction": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Paladin|Champion of the Light": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "spellpower_from_int_pct",
+    "v": [
+     33,
+     66,
+     100
+    ]
+   }
+  ]
+ },
+ "Shaman|Concussion": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "nature_dmg_pct",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Shaman|Elemental Warding": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "damage_taken_pct",
+    "v": [
+     -4,
+     -7,
+     -10
+    ]
+   }
+  ]
+ },
+ "Shaman|Trial by Fire": {
+  "max": 2,
+  "effects": [
+   {
+    "k": "spell_crit_dmg_bonus_pct",
+    "v": [
+     10,
+     20
+    ]
+   }
+  ]
+ },
+ "Shaman|Elemental Fury": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "spell_crit_dmg_bonus_pct",
+    "v": [
+     20,
+     40,
+     60,
+     80,
+     100
+    ]
+   }
+  ]
+ },
+ "Shaman|Ancestral Knowledge": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "mana_pct",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Shaman|Thundering Strikes": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "melee_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Shaman|Mental Dexterity": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "ap_from_int_pct",
+    "v": [
+     33,
+     67,
+     100
+    ]
+   }
+  ]
+ },
+ "Shaman|Anticipation": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "dodge",
+    "v": [
+     1,
+     2,
+     3
+    ]
+   }
+  ]
+ },
+ "Shaman|Toughness": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "armor_items_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ },
+ "Shaman|Mindfulness": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "casting_regen_pct",
+    "v": [
+     17,
+     33,
+     50
+    ]
+   }
+  ]
+ },
+ "Shaman|Natural Grace": {
+  "max": 3,
+  "effects": [
+   {
+    "k": "threat_pct",
+    "v": [
+     -5,
+     -10,
+     -15
+    ]
+   }
+  ]
+ },
+ "Shaman|Tidal Mastery": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "spell_crit",
+    "v": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  ]
+ },
+ "Shaman|Purification": {
+  "max": 5,
+  "effects": [
+   {
+    "k": "healing_pct",
+    "v": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   }
+  ]
+ }
+}

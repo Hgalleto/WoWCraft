@@ -1,0 +1,100 @@
+{
+ "v": 3,
+ "example": false,
+ "char": {
+  "first": "Zephyr",
+  "last": "Cadavera",
+  "faction": "Horde",
+  "race": "undead",
+  "cls": "Paladin",
+  "level": 10,
+  "locked": true,
+  "spec": 0,
+  "gender": "male"
+ },
+ "talents": {
+  "retribution_benediction": 1
+ },
+ "gear": {
+  "Head": {
+   "id": 3732
+  },
+  "Neck": {
+   "id": 279837
+  },
+  "Shoulder": {
+   "id": 270039
+  },
+  "Back": {
+   "id": 279835
+  },
+  "Chest": {
+   "id": 6503
+  },
+  "Shirt": {},
+  "Tabard": {},
+  "Wrist": {
+   "id": 2032
+  },
+  "Hands": {
+   "id": 16741
+  },
+  "Waist": {
+   "id": 251962
+  },
+  "Legs": {
+   "id": 270031
+  },
+  "Feet": {
+   "id": 279840
+  },
+  "Finger 1": {
+   "id": 270051
+  },
+  "Finger 2": {
+   "id": 270051
+  },
+  "Trinket 1": {},
+  "Trinket 2": {},
+  "Main Hand": {
+   "id": 277288
+  },
+  "Off Hand": {
+   "id": 3743
+  },
+  "Ranged / Relic": {}
+ },
+ "baseOverride": null,
+ "other": {
+  "name": "Buffs & consumables"
+ },
+ "racialOn": {},
+ "settings": {
+  "target": 63,
+  "role": "auto",
+  "srcCats": "dw"
+ },
+ "prof": {
+  "p1": "Herbalism",
+  "p2": "Enchanting",
+  "sec": {
+   "Cooking": true,
+   "Fishing": true,
+   "First Aid": true
+  },
+  "spec": {}
+ },
+ "cons": [],
+ "enchants": {
+  "Head": 2591,
+  "Shoulder": 2604,
+  "Chest": 1893,
+  "Wrist": 2566,
+  "Hands": 2617,
+  "Legs": 2591,
+  "Feet": 8492,
+  "Main Hand": 2505,
+  "Neck": 8219,
+  "Off Hand": 7664
+ }
+}

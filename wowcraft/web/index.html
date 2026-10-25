@@ -1,0 +1,2061 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WoWCraft · Forever Talent Forge</title>
+<link rel="icon" href="assets/icons/inv_misc_book_07.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: an armory "character plate" header, racial strip, then tabbed workbench (Talents / Gear / Sheet / Builds). Deliberately single dark theme: parchment-gold on night stone, accent shifts with faction. */
+:root{
+  color-scheme: dark;
+  --bg:#0c0a08; --stone:#15110d; --panel:#1b1611; --panel2:#241d16; --well:#100d0a;
+  --line:#3b2f21; --line-hi:#6b5431;
+  --gold:#e0b95c; --gold-dim:#9a7a3a; --ink:#ece2cc; --muted:#a8987b; --faint:#6f634f;
+  --green:#4fd16a; --red:#e0574a; --amber:#f0a83a;
+  --acc:#4e7fe0; --acc-deep:#1b2f5c; /* Alliance default; Horde overrides below */
+  --cls:#e0b95c;
+  --f-display:"Cinzel", "Trajan Pro", Georgia, serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --tile:46px; --gap:14px;
+}
+body[data-faction="Horde"]{ --acc:#d1453a; --acc-deep:#4f1712; }
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  background-image:radial-gradient(1200px 500px at 50% -120px, color-mix(in srgb, var(--acc-deep) 70%, transparent), transparent 70%),
+  radial-gradient(900px 600px at 100% 100%, #1a120a, transparent 70%);
+  background-attachment:fixed; min-height:100%;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:.04em;text-wrap:balance;margin:0}
+.eyebrow{font-family:var(--f-display);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+
+/* Framed panel: double hairline like a tooltip frame */
+.frame{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:6px;position:relative;
+  box-shadow:inset 0 0 0 1px #00000088, inset 0 1px 0 #ffffff0a, 0 10px 30px #0008}
+.frame::before{content:"";position:absolute;inset:3px;border:1px solid #ffffff08;border-radius:4px;pointer-events:none}
+
+/* Buttons */
+.btn{appearance:none;border:1px solid var(--line-hi);background:linear-gradient(180deg,#3a2c1a,#21180f);color:var(--gold);
+  font-family:var(--f-display);font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;border-radius:4px;cursor:pointer;
+  box-shadow:inset 0 1px 0 #ffffff1a, 0 2px 0 #000;transition:filter .15s, transform .05s}
+.btn:hover{filter:brightness(1.2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,#8a1d14,#4e0d08);border-color:#c0392b;color:#ffe9b0}
+.btn.ghost{background:transparent;box-shadow:none;border-color:var(--line);color:var(--muted)}
+.btn.small{padding:6px 10px;font-size:11px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+
+/* ---------- Character plate ---------- */
+.plate{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;padding:18px 20px;overflow:hidden}
+.plate::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg, color-mix(in srgb,var(--acc) 22%, transparent), transparent 45%);pointer-events:none;border-radius:6px}
+.crest{width:84px;height:84px;position:relative;z-index:1}
+.crest svg{width:100%;height:100%}
+.plate-main{min-width:0;position:relative;z-index:1;display:flex;flex-direction:column;gap:6px}
+.charname{font-size:clamp(24px,4vw,38px);font-weight:900;color:var(--ink);text-shadow:0 2px 0 #000, 0 0 24px #0008;line-height:1.05;overflow-wrap:anywhere}
+.charline{font-family:var(--f-display);font-size:15px;letter-spacing:.06em;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.charline .cls{color:var(--cls);font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--line-hi);color:var(--gold)}
+.pill.fac{border-color:var(--acc);color:#fff;background:color-mix(in srgb,var(--acc) 35%, transparent)}
+.pill.warn{border-color:var(--amber);color:var(--amber)}
+.plate-side{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.lvl{display:flex;align-items:center;gap:8px}
+.lvl input{width:62px;text-align:center}
+.specline{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+
+/* Editor form */
+.editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end;padding:18px 20px;position:relative;z-index:1}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.lbl{font-family:var(--f-display);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-dim)}
+input[type=text],input[type=number],select,textarea{background:var(--well);border:1px solid var(--line);border-radius:4px;padding:8px 10px;color:var(--ink);width:100%;min-width:0;box-shadow:inset 0 2px 4px #0008}
+input:disabled,select:disabled{opacity:.55}
+textarea{font-family:var(--f-mono);font-size:12px;min-height:90px;resize:vertical}
+.faction-toggle{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--well)}
+.faction-toggle button{border:0;background:transparent;padding:8px 6px;cursor:pointer;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.faction-toggle button[aria-pressed="true"][data-f="Alliance"]{background:linear-gradient(180deg,#2b4f9e,#162a57);color:#fff}
+.faction-toggle button[aria-pressed="true"][data-f="Horde"]{background:linear-gradient(180deg,#9e2b22,#561510);color:#fff}
+.faction-toggle button:disabled{cursor:not-allowed}
+.editor-actions{display:flex;gap:10px;flex-wrap:wrap;grid-column:1/-1;align-items:center}
+.note{font-size:13px;color:var(--muted)}
+.confirm{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--amber);border-radius:4px;background:#2a1d08;color:#f7d59b;font-size:14px}
+
+/* ---------- Racials ---------- */
+.racials{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.racial{padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.racial h3{font-size:14px;color:var(--gold)}
+.racial .desc{font-size:13.5px;color:var(--ink);opacity:.9}
+.racial .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{font-family:var(--f-display);font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid}
+.tag.active{color:#9fd0ff;border-color:#3a6ea8}
+.tag.passive{color:#c9b98d;border-color:#6b5a36}
+.tag.src{color:var(--amber);border-color:#7a5413}
+.switch{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.switch input{accent-color:var(--gold)}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{appearance:none;border:1px solid var(--line);border-bottom:0;background:linear-gradient(180deg,#1f1912,#130f0b);padding:10px 18px;border-radius:6px 6px 0 0;cursor:pointer;
+  font-family:var(--f-display);font-weight:700;letter-spacing:.1em;font-size:13px;color:var(--muted);white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--gold);background:linear-gradient(180deg,#352817,#1b1611);border-color:var(--line-hi)}
+.panel{display:flex;flex-direction:column;gap:16px}
+
+/* ---------- Talents ---------- */
+.tbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding:12px 16px}
+.points{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.points b{font-family:var(--f-mono);font-size:22px;color:var(--gold)}
+.trees{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tree{padding:12px 12px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.tree-head{display:flex;justify-content:space-between;align-items:center;gap:8px;position:relative;z-index:1}
+.tree-head h3{font-size:17px;color:var(--ink)}
+.tree-head .tp{font-family:var(--f-mono);color:var(--gold);font-size:15px}
+.tree-role{font-size:12.5px;color:var(--muted);position:relative;z-index:1;margin-top:-6px}
+.tree-bg{position:absolute;inset:0;opacity:.22;pointer-events:none}
+.grid-wrap{position:relative;margin:0 auto;z-index:1}
+.tgrid{display:grid;grid-template-columns:repeat(4,var(--tile));grid-auto-rows:var(--tile);gap:var(--gap);position:relative}
+.tgrid svg.arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.tal{position:relative;border-radius:6px;cursor:pointer;border:2px solid #4a4a4a;background:#222;padding:0;
+  box-shadow:inset 0 0 0 1px #000, 0 2px 4px #000c;transition:transform .08s, box-shadow .15s;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.tal .ic{position:absolute;inset:0;border-radius:4px;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:15px;color:#fff;text-shadow:0 1px 2px #000;filter:grayscale(1) brightness(.5)}
+.tal .rk{position:absolute;right:-8px;bottom:-8px;background:#0a0a0a;border:1px solid #555;border-radius:4px;font-family:var(--f-mono);font-size:10.5px;padding:0 4px;line-height:15px;color:#aaa;font-weight:600}
+.tal.avail{border-color:var(--green);box-shadow:inset 0 0 0 1px #000, 0 0 10px #4fd16a55}
+.tal.avail .ic,.tal.has .ic{filter:none}
+.tal.avail .rk{color:var(--green);border-color:#2f7a3e}
+.tal.has{border-color:var(--green)}
+.tal.has .rk{color:var(--green);border-color:#2f7a3e}
+.tal.max{border-color:var(--gold);box-shadow:inset 0 0 0 1px #000, 0 0 12px #e0b95c66}
+.tal.max .rk{color:var(--gold);border-color:var(--gold-dim)}
+.tal.sel{transform:scale(1.08);z-index:2}
+.tal .flag{position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--amber);border:1px solid #000}
+.tal .flag.unk{background:var(--red)}
+.tree-foot{display:flex;justify-content:flex-end;position:relative;z-index:1}
+
+.inspector{padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.insp-body{min-width:0;display:flex;flex-direction:column;gap:4px}
+.insp-body h3{font-size:17px;color:var(--ink)}
+.insp-rank{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.insp-text{color:#ffd100;font-size:14.5px}
+.insp-next{font-size:14px}
+.insp-next b{color:var(--ink);font-weight:500}
+.insp-req{color:var(--red);font-size:13.5px}
+.insp-btns{display:flex;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;border:1px solid #000}
+
+/* hover tooltip (WoW-style) */
+.tip{position:fixed;z-index:50;max-width:320px;background:linear-gradient(180deg,#0b1020f2,#060914f2);border:1px solid #6d7aa3;border-radius:5px;padding:10px 12px;pointer-events:none;
+  box-shadow:0 8px 24px #000c;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.tip h4{margin:0;font-size:15px;color:#fff;font-family:var(--f-body);font-weight:700}
+.tip .r{color:#ccc;font-family:var(--f-mono);font-size:11.5px}
+.tip .t{color:#ffd100}
+.tip .n{color:#ccc}
+.tip .q{color:#ff4040}
+.tip .s{color:var(--amber);font-size:12px}
+.tip .h{color:#5ec8ff;font-size:12px}
+
+/* ---------- Gear ---------- */
+.gear{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:16px;align-items:start}
+.slots{padding:8px;display:flex;flex-direction:column;gap:2px}
+.slot{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:7px 8px;border-radius:4px;border:1px solid transparent;background:transparent;text-align:left;cursor:pointer;min-width:0}
+.slot:hover{background:#ffffff08}
+.slot[aria-current="true"]{border-color:var(--line-hi);background:#ffffff0d}
+.slot .sq{width:28px;height:28px;border-radius:4px;border:1px solid #555;background:#111;display:grid;place-items:center;font-family:var(--f-display);font-size:10px;color:var(--faint)}
+.slot.filled .sq{border-color:#a335ee;color:#d9b3ff;background:#1d1028}
+.slot .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.slot .nm small{display:block;color:var(--faint);font-size:11px;font-family:var(--f-display);letter-spacing:.12em;text-transform:uppercase}
+.slot .sm{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.ged{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.statgrid .field input{text-align:right;font-family:var(--f-mono)}
+.sect{display:flex;flex-direction:column;gap:10px}
+.sect h3{font-size:14px;color:var(--gold);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+details.frame{padding:12px 16px}
+details summary{cursor:pointer;font-family:var(--f-display);color:var(--gold);letter-spacing:.06em}
+details[open] summary{margin-bottom:12px}
+
+/* ---------- Sheet ---------- */
+.sheet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h3{font-size:14px;color:var(--gold)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px}
+.kv span:nth-child(odd){color:var(--muted)}
+.kv span:nth-child(even){font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.good{color:var(--green)} .bad{color:var(--red)} .mid{color:var(--amber)}
+.roles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.role{padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0;cursor:pointer;text-align:left}
+.role .v{font-family:var(--f-mono);font-size:24px;color:var(--ink);font-weight:600}
+.role .u{font-size:12px;color:var(--muted)}
+.role.on{border-color:var(--gold);box-shadow:inset 0 0 0 1px #000, 0 0 0 1px var(--gold-dim), 0 10px 30px #0008}
+.role.on .v{color:var(--gold)}
+.weights{display:flex;flex-direction:column;gap:6px}
+.wrow{display:grid;grid-template-columns:120px 1fr 56px;gap:10px;align-items:center;font-size:13.5px}
+.wbar{height:10px;background:#0006;border-radius:2px;overflow:hidden;border:1px solid #0008}
+.wbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.wrow .mono{text-align:right}
+.formula{font-size:13px;color:var(--muted);columns:2 320px;column-gap:28px}
+.formula p{margin:0 0 8px;break-inside:avoid}
+.formula b{color:var(--ink);font-weight:500}
+
+/* ---------- Builds ---------- */
+.builds{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.blist{display:flex;flex-direction:column;gap:8px}
+.bitem{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:5px;background:#0003;min-width:0}
+.bitem .nm{min-width:0}
+.bitem .nm b{display:block;font-family:var(--f-display);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bitem .nm small{color:var(--muted);font-size:12.5px}
+.bitem .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.dot{width:12px;height:12px;border-radius:50%;border:1px solid #000}
+.cmp{overflow-x:auto}
+.cmp table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:420px}
+.cmp th,.cmp td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmp th:first-child,.cmp td:first-child{text-align:left;color:var(--muted)}
+.cmp thead th{font-family:var(--f-display);color:var(--gold);font-size:12.5px;letter-spacing:.06em}
+.cmp td{font-family:var(--f-mono)}
+.cmp td.best{color:var(--green);font-weight:600}
+.rank-bars{display:flex;flex-direction:column;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1c150d;border:1px solid var(--gold-dim);color:var(--gold);padding:10px 16px;border-radius:5px;z-index:60;font-family:var(--f-display);letter-spacing:.06em;box-shadow:0 8px 30px #000}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:6px}
+
+/* ---- real artwork ---- */
+.tree{background:#0b0906}
+.tree-bg{opacity:1;background-size:cover;background-position:center top;filter:saturate(.9)}
+.tree-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0008 0%,#0004 30%,#000a 100%)}
+.tal{border-color:#3a3a3a;background:#000;overflow:visible}
+.tal img{position:absolute;inset:0;width:100%;height:100%;border-radius:4px;filter:grayscale(1) brightness(.45);display:block;max-width:none}
+.tal.avail img,.tal.has img,.tal.max img{filter:none}
+.tal::after{content:"";position:absolute;inset:0;border-radius:4px;box-shadow:inset 0 0 0 1px #0009, inset 0 0 8px #000a;pointer-events:none}
+.tal.active-ab{border-radius:50% 50% 6px 6px / 22% 22% 6px 6px}
+.tal .st{position:absolute;left:-7px;top:-7px;font-family:var(--f-display);font-weight:900;font-size:9.5px;line-height:15px;width:15px;text-align:center;border-radius:3px;border:1px solid #000;color:#000;z-index:1}
+.st.new{background:#4fd16a}.st.changed{background:#f0a83a}.st.moved{background:#6fb7ff}
+.legend .k{display:inline-block;font-family:var(--f-display);font-weight:900;font-size:9.5px;line-height:14px;width:14px;text-align:center;border-radius:3px;color:#000;margin-right:5px;vertical-align:middle}
+.tree-head img{width:26px;height:26px;border-radius:4px;border:1px solid #000;box-shadow:0 0 0 1px var(--line-hi)}
+.tree-head .tn{display:flex;align-items:center;gap:8px}
+.tip .cost{color:#fff;font-size:12.5px;display:flex;flex-wrap:wrap;gap:2px 12px}
+.tip .cl{color:#9aa4bd;font-size:12px;border-top:1px solid #ffffff1a;padding-top:4px;margin-top:2px}
+.badge{display:inline-block;font-size:10.5px;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;padding:0 5px;border-radius:3px;color:#000;margin-right:6px}
+.racial .rhead{display:flex;gap:10px;align-items:center}
+.racial .rhead img{width:38px;height:38px;border-radius:5px;border:1px solid #000;box-shadow:0 0 0 1px var(--line-hi);flex:none}
+.crest.portrait{position:relative}
+.crest.portrait .ci{width:100%;height:100%;border-radius:10px;border:2px solid var(--gold-dim);box-shadow:0 0 0 2px #000, 0 6px 18px #000c;display:block}
+.crest.portrait .ri{position:absolute;right:-10px;bottom:-10px;width:44%;height:44%;border-radius:50%;border:2px solid var(--acc);box-shadow:0 0 0 2px #000}
+.classgrid{display:flex;flex-wrap:wrap;gap:6px}
+.classgrid button{width:44px;height:44px;padding:0;border-radius:6px;border:2px solid #333;background:#000;cursor:pointer;position:relative}
+.classgrid button img{width:100%;height:100%;border-radius:4px;display:block}
+.classgrid button[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 10px #e0b95c88}
+.classgrid button:disabled{opacity:.25;cursor:not-allowed}
+.insp-head{display:flex;gap:12px;align-items:center}
+.insp-head img{width:48px;height:48px;border-radius:6px;border:1px solid #000;box-shadow:0 0 0 1px var(--line-hi)}
+.cr-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+/* ---- armory (gear tab) ---- */
+.armory{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,1fr);gap:16px;align-items:start}
+.doll{display:grid;grid-template-columns:minmax(150px,1fr) minmax(220px,1.3fr) minmax(150px,1fr);grid-template-rows:auto auto;gap:10px;padding:14px;
+  background:radial-gradient(70% 60% at 50% 40%, color-mix(in srgb,var(--acc-deep) 55%, #120e0a), #0b0907 75%)}
+.dcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+#dollR .gslot{flex-direction:row-reverse;text-align:right}
+.dbot{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gslot{display:flex;align-items:center;gap:8px;padding:3px;border:1px solid transparent;border-radius:6px;background:transparent;cursor:pointer;min-width:0;text-align:left}
+.gslot:hover{background:#ffffff0a}
+.gslot.on{border-color:var(--gold-dim);background:#e0b95c14}
+.gslot .gi{width:42px;height:42px;flex:none;border:2px solid #3a3a3a;border-radius:6px;background:#0a0a0a;overflow:hidden;box-shadow:inset 0 0 0 1px #000, 0 2px 4px #000a}
+.gslot .gi img{width:100%;height:100%;display:block}
+.gempty{display:grid;place-items:center;width:100%;height:100%;font-family:var(--f-display);font-size:11px;color:var(--faint);letter-spacing:.06em}
+.gslot .gn{min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.gslot .gn small{font-family:var(--f-display);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-dim)}
+.gslot .gn b{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage{min-width:0;display:flex}
+.mv-wrap{position:relative;width:100%;display:flex;flex-direction:column;gap:6px}
+.mv{width:100%;height:440px;border-radius:8px;overflow:hidden;background:radial-gradient(60% 55% at 50% 45%, #2a2016, #0a0806);border:1px solid var(--line);cursor:grab}
+.mv:active{cursor:grabbing}
+.mv-msg{position:absolute;left:10px;right:10px;top:10px;font-size:12.5px;color:var(--muted);text-align:center;pointer-events:none}
+.mv-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.mv-g{width:150px}
+.mv-g button[aria-pressed="true"]{background:linear-gradient(180deg,#5a4320,#2c2010);color:var(--gold)}
+.mv-hint{font-size:11.5px;color:var(--faint)}
+.picker{padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;max-height:860px}
+#pkItems,#pkEnch{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+#pkItems[hidden],#pkEnch[hidden]{display:none}
+.pk-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.pk-cur{display:flex;gap:10px;align-items:center;margin-top:6px}
+.pk-cur img{width:40px;height:40px;border-radius:6px;border:1px solid #000}
+.pk-cur b{display:block;font-size:15px}
+.pk-cur small{color:var(--muted);font-size:12.5px}
+.pk-tools{display:grid;grid-template-columns:1fr auto;gap:8px}
+.pk-tools input{font-size:15px}
+.pk-filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.pk-filters select{width:auto;padding:5px 8px;font-size:13px}
+.src-chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex-basis:100%}
+.chip{font:inherit;font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--line,#4a3b26);background:transparent;color:var(--muted,#a8987b);cursor:pointer}
+.chip.on{background:rgba(224,185,92,.16);border-color:#e0b95c;color:#f0d68a}
+.chip:focus-visible{outline:2px solid #e0b95c;outline-offset:1px}
+.upd{display:flex;flex-direction:column;gap:14px}
+.upd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.upd-big{border-color:var(--line-hi)}
+.upd-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.upd-meta b{color:var(--ink);font-weight:600}
+.upd-ver{display:flex;flex-wrap:wrap;gap:8px 22px}
+.upd-ver span{display:flex;flex-direction:column}
+.upd-ver small{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.upd-ver b{font-size:13px;color:var(--ink);font-weight:600}
+.upd-log{max-height:260px;overflow:auto;background:#0b0907;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:12px;color:var(--muted);white-space:pre-wrap;margin:0}
+.upd-step{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--line)}
+.upd-grp{font-size:13px}
+.upd-line{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.upd-line>span:first-child{color:var(--ink);font-weight:600;min-width:150px}
+.upd-ex{color:var(--muted);font-size:12px;padding-left:12px}
+.upd-added{color:#1eff00}.upd-removed{color:#ff6b5a}.upd-changed{color:#e0b95c}
+.pk-list{overflow-y:auto;min-height:200px;flex:1;display:flex;flex-direction:column;gap:2px;margin:0 -6px;padding:0 6px}
+.pk-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:5px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left}
+.pk-row:hover{background:#ffffff0b}
+.pk-row.on{border-color:var(--gold-dim);background:#e0b95c12}
+.pk-row img{width:36px;height:36px;border-radius:5px;border:1px solid;display:block}
+.pk-nm{min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.pk-nm b{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-nm small{color:var(--faint);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-nm .pk-st{color:#9fd99a}
+.pk-d{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.pk-d small{font-size:10px;margin-left:2px}
+.pk-d.up{color:var(--green)} .pk-d.down{color:var(--red)}
+.gear-extra{display:flex;flex-direction:column;gap:12px}
+.tip .g{color:#1eff00}
+/* ---- professions & enchants ---- */
+:root{--ench:#5fe3ff}
+.ench{color:var(--ench);font-style:normal;text-shadow:0 0 8px #5fe3ff55}
+.gslot .gn em.ench{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ench.temp{color:#9fe870;text-shadow:0 0 8px #9fe87055}
+.crafted{color:#f0c674}
+.srcl{color:#e6d3a3}.unconf{color:var(--faint);font-style:italic}
+.tip .cl .srcl,.tip .cl .unconf{font-size:12px}
+.specpick{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.spec-seg{display:flex;flex-wrap:wrap;gap:6px}
+.spec-seg button{display:grid;grid-template-columns:22px auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;padding:5px 12px 5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--well);color:var(--muted);cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.04em}
+.spec-seg button img{grid-row:1/3;width:22px;height:22px;border-radius:4px;filter:grayscale(1) brightness(.7)}
+.spec-seg button small{font-family:var(--f-body);font-weight:400;font-size:11px;letter-spacing:0;color:var(--faint)}
+.spec-seg button[aria-checked="true"]{border-color:var(--gold);color:var(--gold);background:linear-gradient(180deg,#3a2c1a,#21180f);box-shadow:0 0 10px #e0b95c44}
+.spec-seg button[aria-checked="true"] img{filter:none}
+.plan-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pf-plan .pf-r{grid-template-columns:32px minmax(0,1.6fr) minmax(60px,1fr) 80px 80px 80px}
+.pf-plan .pf-head{padding-top:0;padding-bottom:0}
+.pf-plan .pf-head .lbl{text-align:right;font-size:10px}
+.pf-plan .pf-head .lbl:nth-child(3){text-align:left}
+.pf-plan .mono{text-align:right;color:var(--muted)}
+.pf-plan .mono.on{color:var(--green);font-weight:600}
+.pf-plan .lbl.on{color:var(--gold)}
+@media (max-width:760px){ .pf-plan .pf-r{grid-template-columns:32px minmax(0,1fr) 60px 60px 60px} .pf-plan .pf-r .wbar,.pf-plan .pf-head .lbl:nth-child(3){display:none} }
+.src{display:inline-block;font-size:10.5px;font-family:var(--f-display);letter-spacing:.06em;padding:1px 7px;border-radius:3px;border:1px solid;white-space:nowrap;justify-self:end}
+.src-f{color:#7fd3ff;border-color:#2b6a8c}.src-s{color:var(--green);border-color:#2f7a3e}.src-e{color:var(--amber);border-color:#7a5413}
+.src-table{display:flex;flex-direction:column}
+.src-row{display:grid;grid-template-columns:minmax(0,1fr) auto 280px;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.src-row .mono{text-align:right}
+.calib-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+@media (max-width:760px){ .src-row{grid-template-columns:1fr auto} .src-row .src{grid-column:1/-1;justify-self:start} }
+.over{color:var(--red);font-style:normal;font-size:11.5px}
+.gslot .gn em.over{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doll-tools{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:flex-end}
+.doll-tools .over{margin-right:auto;font-size:13px}
+.profbar{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end;padding:12px 20px 16px;border-top:1px solid var(--line);background:#0006}
+.pf-group{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pf-group > .lbl{display:block}
+.pf-group select{width:auto;min-width:150px;padding:6px 8px}
+.pf-group:first-child{flex-direction:row;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.pf-group:first-child > .lbl{width:100%}
+.pf-pick{display:flex;align-items:center;gap:6px}
+.pf-pick img{width:28px;height:28px;border-radius:5px;border:1px solid #000;box-shadow:0 0 0 1px var(--line-hi)}
+.pf-sec{display:flex;gap:6px;flex-wrap:wrap}
+.pf-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;color:var(--muted);background:var(--well)}
+.pf-chip input{position:absolute;opacity:0;pointer-events:none}
+.pf-chip img{width:22px;height:22px;border-radius:50%;filter:grayscale(1) brightness(.6)}
+.pf-chip.on{border-color:var(--gold-dim);color:var(--gold)}
+.pf-chip.on img{filter:none}
+.pf-chip:focus-within{outline:2px solid var(--gold);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:var(--well);flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 12px;cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.seg button[aria-selected="true"]{background:linear-gradient(180deg,#3a2c1a,#21180f);color:var(--gold)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.en-row .en-mark,.en-mark{width:6px;align-self:stretch;border-radius:3px;background:linear-gradient(180deg,var(--ench),#2a7fa0);box-shadow:0 0 8px #5fe3ff66}
+.en-row{grid-template-columns:6px minmax(0,1fr) auto}
+.pk-row.locked,.pt-row.locked{opacity:.55;cursor:not-allowed}
+.cons{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.cons-g{display:flex;flex-direction:column;gap:8px;min-width:0}
+.cons-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cons-h small{color:var(--faint);font-size:11.5px}
+.cons-on{display:flex;flex-direction:column;gap:6px;min-height:28px}
+.cons-chip{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px;border:1px solid var(--line);border-radius:5px;background:#0004}
+.cons-chip img{width:28px;height:28px;border-radius:4px}
+.cons-chip b{display:block;font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cons-chip small{color:#9fd99a;font-size:11.5px}
+.cons-g select{font-size:13px}
+.pf-rank{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.pf-r{display:grid;grid-template-columns:32px minmax(0,1.6fr) minmax(80px,1fr) 90px;gap:10px;align-items:center;padding:6px 8px;border-radius:5px}
+.pf-r.mine{background:#e0b95c10;border:1px solid var(--line)}
+.pf-r img{width:32px;height:32px;border-radius:5px;border:1px solid #000}
+.pf-rn{min-width:0;display:flex;flex-direction:column}
+.pf-rn small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-r .mono{text-align:right;color:var(--green)}
+.pf-r .mono small{font-size:10px;color:var(--muted)}
+.pt-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pt-tools select,.pt-tools input[type=search]{width:auto;min-width:180px}
+.pt-list{display:flex;flex-direction:column;gap:2px;max-height:900px;overflow-y:auto}
+.pt-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:6px 8px;border-radius:5px}
+.pt-row:hover{background:#ffffff08}
+.pt-row img{width:36px;height:36px;border-radius:5px;border:1px solid}
+.en-mark.big{width:6px;height:36px;justify-self:center}
+@media (max-width:760px){ .pf-r{grid-template-columns:32px minmax(0,1fr) 70px} .pf-r .wbar{display:none} .pt-row{grid-template-columns:36px minmax(0,1fr) auto} .pt-row > .btn,.pt-row > span:last-child{grid-column:2} }
+@media (max-width: 1100px){ .armory{grid-template-columns:1fr} .picker{max-height:none} .pk-list{max-height:520px} }
+@media (max-width: 760px){ .doll{grid-template-columns:1fr 1fr} .stage{grid-column:1/-1;order:-1} .mv{height:340px} .dbot{grid-template-columns:1fr} #dollR .gslot{flex-direction:row;text-align:left} }
+@media (max-width: 1000px){
+  .trees{grid-template-columns:1fr}
+  .tree{max-width:420px;width:100%;margin:0 auto}
+  .sheet{grid-template-columns:1fr 1fr}
+  .roles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .racials{grid-template-columns:1fr 1fr}
+}
+@media (max-width: 720px){
+  .plate{grid-template-columns:auto 1fr}
+  .plate-side{grid-column:1/-1;align-items:flex-start}
+  .crest{width:60px;height:60px}
+  .gear,.builds,.sheet{grid-template-columns:1fr}
+  .roles{grid-template-columns:1fr 1fr}
+  .racials{grid-template-columns:1fr}
+  .inspector{grid-template-columns:1fr}
+  :root{--tile:42px;--gap:12px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head><body>
+<div class="wrap" id="app">
+  <section class="frame" id="plateSec" aria-label="Character"></section>
+  <section class="racials" id="racials" aria-label="Racial traits"></section>
+  <section id="classRacials" aria-label="Class racial spells"></section>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="talents" aria-selected="true" id="tab-talents">Talents</button>
+    <button class="tab" role="tab" data-tab="gear" aria-selected="false" id="tab-gear">Gear &amp; Stats</button>
+    <button class="tab" role="tab" data-tab="sheet" aria-selected="false" id="tab-sheet">Character Sheet</button>
+    <button class="tab" role="tab" data-tab="prof" aria-selected="false" id="tab-prof">Professions &amp; Crafting</button>
+    <button class="tab" role="tab" data-tab="builds" aria-selected="false" id="tab-builds">Saved Builds &amp; Compare</button>
+    <button class="tab" role="tab" data-tab="updates" aria-selected="false" id="tab-updates">Updates</button>
+  </nav>
+  <main id="view" class="panel"></main>
+  <p class="note" id="credits">Talent, racial and tooltip data from <a href="https://talentsforever.com" target="_blank" rel="noopener" style="color:var(--gold)">talentsforever.com</a> (CC BY 4.0), read from the WoW Forever beta client. Item sources, recipes and reagents: <a href="https://foreverdb.net" target="_blank" rel="noopener" style="color:var(--gold)">Data from ForeverDB.net</a>. Icons and tree art © Blizzard Entertainment. Stat formulas use Classic 1.12 level-60 rules until Forever's are confirmed.</p>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+let DATA = null;
+const ICON = n => "assets/icons/" + n + ".jpg";
+const API = { ok:false,
+  async get(p){ const r=await fetch("api/"+p); if(!r.ok) throw new Error(r.status); return r.json(); },
+  async send(p,method,body){ const r=await fetch("api/"+p,{method,headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined}); if(!r.ok) throw new Error(r.status); return r.json(); }
+};
+const CLASS_ICON = {Druid:"classicon_druid",Hunter:"classicon_hunter",Mage:"classicon_mage",Paladin:"classicon_paladin",Priest:"classicon_priest",Rogue:"classicon_rogue",Shaman:"classicon_shaman",Warlock:"classicon_warlock",Warrior:"classicon_warrior"};
+const STATUS_LBL = {new:["N","new","New in Forever"],changed:["C","changed","Changed from Classic"],moved:["M","moved","Moved, same effect"],same:null};
+function clsIcon(c){ return ICON(((DATA&&DATA.classes&&DATA.classes[c])||{}).icon||("class_"+String(c||"").toLowerCase())); }
+function renderClassRacials(){
+  const el=document.getElementById("classRacials"); if(!el) return;
+  const cr=DATA&&DATA.classRacials&&DATA.classRacials[S.char.cls]; const rn=RACE_NAME[S.char.race];
+  const list=cr&&cr.races&&cr.races[rn];
+  if(!list||!list.length){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="eyebrow" style="margin-bottom:8px">${esc(rn)} ${esc(S.char.cls)} racial spells</div><div class="cr-row">${list.map(a=>`<article class="frame racial"><div class="rhead"><img src="${ICON(a.icon)}" alt=""><h3>${esc(a.name)}</h3></div><div class="desc">${esc(a.desc)}</div></article>`).join("")}</div>`;
+}
+function racesList(){ return (DATA&&DATA.races)||[]; }
+
+/* ================== Static game tables ================== */
+const CLASSES = ["Druid","Hunter","Mage","Paladin","Priest","Rogue","Shaman","Warlock","Warrior"];
+const CLASS_COLOR = {Druid:"#FF7D0A",Hunter:"#ABD473",Mage:"#69CCF0",Paladin:"#F58CBA",Priest:"#F2F2F2",Rogue:"#FFF569",Shaman:"#2a8cff",Warlock:"#9482C9",Warrior:"#C79C6E"};
+const RACES = {
+  Alliance:[["human","Human"],["dwarf","Dwarf"],["gnome","Gnome"],["nightelf","Night Elf"],["skyborne","Skyborne Elf"]],
+  Horde:[["orc","Orc"],["tauren","Tauren"],["undead","Undead"],["troll","Troll"],["skyborne","Skyborne Elf"]]
+};
+const RACE_NAME = {human:"Human",dwarf:"Dwarf",gnome:"Gnome",nightelf:"Night Elf",orc:"Orc",tauren:"Tauren",undead:"Undead",troll:"Troll",skyborne:"Skyborne Elf"};
+const raceDataKey = (race,fac) => race==="skyborne" ? (fac==="Horde"?"skyborne_horde":"skyborne_alliance") : race;
+
+/* Classic 1.12 level-60 class baselines (editable in Gear & Stats). */
+const CLS = {
+  Warrior:{base:{str:120,agi:80,sta:110,int:30,spi:47},hp:1689,mana:0,ap:"str2",rap:"agi1",mcAgi:20,mcBase:0,scInt:0,scBase:0,dgAgi:20,dgBase:0,parry:1,block:1,reg:[0,0],dw:1,abil:1.55,plate:"rage"},
+  Paladin:{base:{str:105,agi:65,sta:100,int:70,spi:78},hp:1381,mana:1512,ap:"str2",rap:"none",mcAgi:20,mcBase:0.7,scInt:54,scBase:3.3,dgAgi:20,dgBase:0.7,parry:1,block:1,reg:[15,5],dw:0,abil:1.3},
+  Hunter:{base:{str:57,agi:125,sta:93,int:65,spi:70},hp:1467,mana:1720,ap:"strAgi",rap:"agi2",mcAgi:53,mcBase:0,scInt:0,scBase:0,dgAgi:26.5,dgBase:0,parry:1,block:0,reg:[15,5],dw:1,abil:1.0,rabil:1.45},
+  Rogue:{base:{str:80,agi:130,sta:75,int:35,spi:50},hp:1523,mana:0,ap:"strAgi",rap:"agi1",mcAgi:29,mcBase:0,scInt:0,scBase:0,dgAgi:14.5,dgBase:0,parry:1,block:0,reg:[0,0],dw:1,abil:1.7},
+  Priest:{base:{str:35,agi:40,sta:50,int:120,spi:125},hp:1397,mana:1436,ap:"str1",rap:"none",mcAgi:20,mcBase:3,scInt:59.2,scBase:0.8,dgAgi:20,dgBase:3,parry:0,block:0,reg:[13,4],dw:0,abil:1.0},
+  Shaman:{base:{str:85,agi:55,sta:98,int:75,spi:88},hp:1423,mana:1520,ap:"str2",rap:"none",mcAgi:20,mcBase:1.7,scInt:59.2,scBase:2.3,dgAgi:20,dgBase:1.7,parry:0,block:1,reg:[17,5],dw:0,abil:1.35},
+  Druid:{base:{str:62,agi:65,sta:69,int:100,spi:110},hp:1483,mana:1244,ap:"str2c",rap:"none",mcAgi:20,mcBase:0.9,scInt:60,scBase:1.8,dgAgi:20,dgBase:0.9,parry:0,block:0,reg:[15,5],dw:0,abil:1.4},
+  Warlock:{base:{str:50,agi:55,sta:75,int:110,spi:113},hp:1414,mana:1373,ap:"str1",rap:"none",mcAgi:20,mcBase:2,scInt:60.6,scBase:1.7,dgAgi:20,dgBase:2,parry:0,block:0,reg:[8,4],dw:0,abil:1.0},
+  Mage:{base:{str:34,agi:38,sta:47,int:125,spi:120},hp:1301,mana:1213,ap:"str1",rap:"none",mcAgi:20,mcBase:3.2,scInt:59.5,scBase:0.2,dgAgi:20,dgBase:3.2,parry:0,block:0,reg:[13,4],dw:0,abil:1.0}
+};
+/* Classic racial base-stat offsets vs Human; replaced by Forever data when present. */
+let RACE_MODS = {human:[0,0,0,0,0],dwarf:[2,-4,3,-1,-1],gnome:[-5,3,-1,3,0],nightelf:[-3,5,-1,0,0],orc:[3,-3,2,-3,3],tauren:[5,-5,2,-5,2],undead:[-1,-2,1,-2,5],troll:[1,2,1,-4,1],skyborne_alliance:[0,0,0,0,0],skyborne_horde:[0,0,0,0,0]};
+let CLASSES_BY_RACE = {
+  human:["Warrior","Paladin","Rogue","Priest","Mage","Warlock"], dwarf:["Warrior","Paladin","Hunter","Rogue","Priest"],
+  gnome:["Warrior","Rogue","Mage","Warlock"], nightelf:["Warrior","Hunter","Rogue","Priest","Druid"],
+  orc:["Warrior","Hunter","Rogue","Shaman","Warlock"], tauren:["Warrior","Hunter","Shaman","Druid"],
+  undead:["Warrior","Rogue","Priest","Mage","Warlock"], troll:["Warrior","Hunter","Rogue","Priest","Shaman","Mage"],
+  skyborne_alliance:["Mage","Priest","Paladin","Hunter","Rogue","Warrior"], skyborne_horde:["Shaman","Priest","Hunter","Rogue","Warrior","Druid"]
+};
+
+/* Role per tree (by tree index; Forever keeps Classic tree order). */
+const TREE_ROLE = {
+  Warrior:["melee","melee","tank"], Paladin:["heal","tank","melee"], Priest:["heal","heal","spell"],
+  Hunter:["ranged","ranged","ranged"], Druid:["spell","melee","heal"], Shaman:["spell","melee","heal"],
+  Rogue:["melee","melee","melee"], Warlock:["spell","spell","spell"], Mage:["spell","spell","spell"]
+};
+/* Nominal spells used for spell/heal estimates: avg dmg, cast s, coefficient, mana, school */
+const SPELL = {
+  Mage:[{n:"Arcane Missiles",avg:1150,cast:5,co:1.2,m:655,s:"arcane"},{n:"Fireball (R12)",avg:716,cast:3.0,co:1.0,m:410,s:"fire"},{n:"Frostbolt (R11)",avg:535,cast:2.5,co:0.814,m:290,s:"frost"}],
+  Warlock:[{n:"Shadow Bolt (R10)",avg:481,cast:2.5,co:0.857,m:380,s:"shadow"},{n:"Shadow Bolt (R10)",avg:481,cast:2.5,co:0.857,m:380,s:"shadow"},{n:"Shadow Bolt (R10)",avg:481,cast:2.5,co:0.857,m:380,s:"shadow"}],
+  Priest:[null,null,{n:"Mind Flay (R6)",avg:426,cast:3,co:0.45,m:205,s:"shadow"}],
+  Druid:[{n:"Starfire (R7)",avg:588,cast:3.0,co:1.0,m:340,s:"arcane"},null,null],
+  Shaman:[{n:"Lightning Bolt (R10)",avg:443,cast:2.0,co:0.857,m:265,s:"nature"},null,null]
+};
+const HEAL = {
+  Priest:{n:"Greater Heal (R4)",avg:2080,cast:2.5,co:0.857,m:655}, Paladin:{n:"Holy Light (R9)",avg:1680,cast:2.5,co:0.714,m:660},
+  Druid:{n:"Healing Touch (R11)",avg:2472,cast:3.0,co:1.0,m:800}, Shaman:{n:"Healing Wave (R10)",avg:1735,cast:2.5,co:0.857,m:620}
+};
+const DEFAULT_SPELL = {Paladin:{n:"Holy Shock",avg:400,cast:1.5,co:0.43,m:300,s:"holy"},Hunter:null,Rogue:null,Warrior:null};
+
+const SLOTS = ["Head","Neck","Shoulder","Back","Chest","Shirt","Tabard","Wrist","Hands","Waist","Legs","Feet","Finger 1","Finger 2","Trinket 1","Trinket 2","Main Hand","Off Hand","Ranged / Relic"];
+/* which item inventory types fit each slot */
+const SLOT_INV = {"Head":[1],"Neck":[2],"Shoulder":[3],"Back":[16],"Chest":[5,20],"Shirt":[4],"Tabard":[19],"Wrist":[9],"Hands":[10],"Waist":[6],"Legs":[7],"Feet":[8],
+  "Finger 1":[11],"Finger 2":[11],"Trinket 1":[12],"Trinket 2":[12],"Main Hand":[13,17,21],"Off Hand":[13,14,22,23],"Ranged / Relic":[15,25,26,28]};
+/* model viewer slot for each paper-doll slot */
+const VIEW_SLOT = {"Head":1,"Shoulder":3,"Shirt":4,"Chest":5,"Waist":6,"Legs":7,"Feet":8,"Wrist":9,"Hands":10,"Back":16,"Tabard":19,"Main Hand":21,"Off Hand":22,"Ranged / Relic":26};
+const ARMOR_OK = {Warrior:["Cloth","Leather","Mail","Plate","Shield"],Paladin:["Cloth","Leather","Mail","Plate","Shield","Libram"],Hunter:["Cloth","Leather","Mail"],
+  Rogue:["Cloth","Leather"],Priest:["Cloth"],Shaman:["Cloth","Leather","Mail","Shield","Totem"],Mage:["Cloth"],Warlock:["Cloth"],Druid:["Cloth","Leather","Idol"]};
+const WEAPON_OK = {
+  Warrior:["One-Hand Axe","Two-Hand Axe","One-Hand Mace","Two-Hand Mace","One-Hand Sword","Two-Hand Sword","Polearm","Staff","Dagger","Fist Weapon","Bow","Gun","Crossbow","Thrown"],
+  Paladin:["One-Hand Axe","Two-Hand Axe","One-Hand Mace","Two-Hand Mace","One-Hand Sword","Two-Hand Sword","Polearm"],
+  Hunter:["One-Hand Axe","Two-Hand Axe","One-Hand Sword","Two-Hand Sword","Polearm","Staff","Dagger","Fist Weapon","Bow","Gun","Crossbow","Thrown"],
+  Rogue:["One-Hand Axe","One-Hand Mace","One-Hand Sword","Dagger","Fist Weapon","Bow","Gun","Crossbow","Thrown"],
+  Priest:["One-Hand Mace","Staff","Dagger","Wand"], Shaman:["One-Hand Axe","Two-Hand Axe","One-Hand Mace","Two-Hand Mace","Staff","Dagger","Fist Weapon"],
+  Mage:["One-Hand Sword","Staff","Dagger","Wand"], Warlock:["One-Hand Sword","Staff","Dagger","Wand"], Druid:["One-Hand Mace","Two-Hand Mace","Staff","Dagger","Fist Weapon"]};
+let ITEMS=[], ALL_ITEMS=[], ITEM_BY_ID={};
+/* Gear not yet confirmed in Forever stays in items.json but is inactive: hidden and never counted.
+   Confirmed = seen in Forever by ForeverDB players, or from Forever's own client data (e.g. a crafting recipe). */
+function showUnconfirmed(){ try{ return localStorage.getItem("wowcraft.showUnconfirmed")==="1"; }catch(e){ return false; } }
+function isActive(it){ return !!it && (!!it.ok || showUnconfirmed()); }
+function applyConfirmed(){ ITEMS=ALL_ITEMS.filter(isActive); }
+/* the tooltip's "Requires Level N" is the only level gate; item level is just the item's score */
+function reqText(it){ return String(it.rl||1); }
+const BIND_TEXT={1:"Binds when picked up",2:"Binds when equipped",3:"Binds when used",4:"Quest Item",5:"Binds to Account"};
+const BIND_SHORT={1:"Bind on Pickup",2:"Bind on Equip",3:"Bind on Use",4:"Quest Item",5:"Account Bound"};
+/* where gear comes from: w open world, d dungeon, r raid, c crafted, p PvP, u not recorded */
+const SRC_CATS=[["w","Open world","Quests, vendors, world drops, rares and reputation"],["d","Dungeons","5-player dungeon bosses"],["r","Raids","Raid bosses and raid quests"],["c","Crafted","Made by a profession (yours, or bought / traded)"],["p","PvP","Honor ranks and battleground reputation"],["u","Source unknown","Items ForeverDB hasn't recorded a source for yet"]];
+function itemCats(it){ return it.cat||"u"; }
+function srcCats(){ const c=(S.settings||{}).srcCats; return typeof c==="string"?c:"wdrcpu"; }
+function srcOk(it,cats){ cats=cats??srcCats(); const ic=itemCats(it); for(const ch of ic) if(cats.includes(ch)) return true; return false; }
+/* another equipped item this one can't be worn alongside (Unique / Unique-Equipped group) */
+function uniqueClash(it,slot,state){
+  if(!it||!it.u) return null;
+  for(const s of SLOTS){ if(s===slot) continue; const o=itemFor(state,s); if(!o) continue;
+    if(o.id===it.id || (it.ug&&o.ug===it.ug)) return {slot:s,it:o}; }
+  return null;
+}
+function itemFor(state,slot){ const g=state.gear[slot]; return g&&g.id?ITEM_BY_ID[g.id]:null; }
+/* normalised stats for one equipped slot (item from the database, or an older hand-typed entry) */
+function slotView(state,slot){
+  const g=state.gear[slot]; if(!g) return {};
+  const it=g.id&&ITEM_BY_ID[g.id];
+  if(!it) return g.id?{}:g;
+  if(!isActive(it)) return {name:it.n, inactive:true};                 // not confirmed in Forever, so it adds nothing
+  if(it.lv>(+state.char.level||60)) return {name:it.n, over:true};   // can't be worn yet, so it adds nothing
+  const o=Object.assign({name:it.n},it.st||{});
+  if(it.w){ o.wmin=it.w.min; o.wmax=it.w.max; o.wspd=it.w.spd; }
+  o.wtype = it.inv===23?"Held In Off-hand":it.t;
+  const add=st=>{ for(const [k,v] of Object.entries(st||{})){
+      if(k==="wdmg"||k==="rwdmg"){ if(o.wmax){ o.wmin+=v; o.wmax+=v; } }
+      else o[k]=(o[k]||0)+v; } };
+  const en=enchantOn(state,slot,it); if(en) add(en.st);          // the one permanent enchant
+  const tp=tempOn(state,slot,it); if(tp) add(tp.st);             // plus one temporary stone / oil / poison / imbue
+  return o;
+}
+const WEAPON_SLOTS = new Set(["Main Hand","Off Hand","Ranged / Relic"]);
+const WTYPES = ["—","One-Hand Sword","One-Hand Axe","One-Hand Mace","Dagger","Fist Weapon","Two-Hand Sword","Two-Hand Axe","Two-Hand Mace","Polearm","Staff","Bow","Gun","Crossbow","Thrown","Wand","Shield","Held In Off-hand","Libram / Totem / Idol"];
+const TWO_HAND = new Set(["Two-Hand Sword","Two-Hand Axe","Two-Hand Mace","Polearm","Staff"]);
+const STATS = [
+  ["str","Strength"],["agi","Agility"],["sta","Stamina"],["int","Intellect"],["spi","Spirit"],
+  ["armor","Armor"],["ap","Attack Power"],["rap","Ranged AP"],["sp","Spell Dmg & Healing"],["heal","Healing only"],
+  ["crit","Crit %"],["hit","Hit %"],["scrit","Spell Crit %"],["shit","Spell Hit %"],["mp5","Mana / 5s"],
+  ["def","Defense skill"],["dodge","Dodge %"],["parry","Parry %"],["block","Block %"],["bv","Block Value"],["hp","Health"]
+];
+const PRIMARY = ["str","agi","sta","int","spi"];
+
+/* ================== State ================== */
+const ROLE_LABEL = {melee:"Melee DPS",ranged:"Ranged DPS",spell:"Spell DPS",heal:"Healing",tank:"Tanking"};
+function blankGear(){ const g={}; SLOTS.forEach(s=>g[s]={}); return g; }
+function exampleState(){
+  const g = blankGear();
+  return {
+    v:3, example:true,
+    char:{first:"Aerin",last:"Dawnmantle",faction:"Alliance",race:"human",cls:"Paladin",level:60,locked:true,spec:0},
+    prof:{p1:"Blacksmithing",p2:"Mining",sec:{Cooking:true,"First Aid":true},spec:{}}, enchants:{}, temps:{}, cons:[],
+    talents:{}, gear:g, baseOverride:null, other:{name:"Buffs & consumables"}, racialOn:{}, settings:{target:63, role:"auto"}
+  };
+}
+let S;
+function load(){ try{ const raw=localStorage.getItem("wowcraft.current"); if(raw){ const o=JSON.parse(raw); if(o&&o.v===3) return o; } }catch(e){} return null; }
+let persistTimer=null;
+function persist(){
+  try{ localStorage.setItem("wowcraft.current", JSON.stringify(S)); }catch(e){}
+  if(API.ok){ clearTimeout(persistTimer); persistTimer=setTimeout(()=>API.send("current","PUT",S).catch(()=>{}),600); }
+}
+let ui = {tab:"talents", slot:"Head", sel:null, editing:false, draft:null, confirm:null, compare:[], sort:"best", usable:true, lvlok:true, minq:1, q:""};
+
+/* ================== Data helpers ================== */
+function classData(cls){ return (DATA && DATA.classes && DATA.classes[cls]) || {trees:[]}; }
+function allTalents(cls){ const out=[]; classData(cls).trees.forEach((t,ti)=>t.talents.forEach(x=>out.push(Object.assign({ti},x)))); return out; }
+function talentMap(cls){ const m={}; allTalents(cls).forEach(t=>m[t.id]=t); return m; }
+function raceInfo(){ const k=raceDataKey(S.char.race,S.char.faction); return racesList().find(x=>x.id===k)||{racials:[]}; }
+function totalPoints(){ return Math.max(0,(+S.char.level||60)-9); }
+function treePoints(ti){ const cd=classData(S.char.cls); if(!cd.trees[ti]) return 0; return cd.trees[ti].talents.reduce((a,t)=>a+(S.talents[t.id]||0),0); }
+function spent(){ return Object.values(S.talents).reduce((a,b)=>a+b,0); }
+
+function canAdd(t){
+  const r=S.talents[t.id]||0; if(r>=t.max) return {ok:false};
+  const reasons=[];
+  if(spent()>=totalPoints()) reasons.push("No talent points remaining");
+  const need=(t.tier-1)*5, have=treePoints(t.ti);
+  if(have<need) reasons.push(`Requires ${need} points in ${classData(S.char.cls).trees[t.ti].name} Talents`);
+  if(t.req){ const p=talentMap(S.char.cls)[t.req]; if(p && (S.talents[p.id]||0)<p.max) reasons.push(`Requires ${p.max} point${p.max>1?"s":""} in ${p.name}`); }
+  return {ok:reasons.length===0,reasons};
+}
+function canRemove(t){
+  const r=S.talents[t.id]||0; if(r<=0) return false;
+  const all=allTalents(S.char.cls).filter(x=>x.ti===t.ti);
+  if(all.some(x=>x.req===t.id && (S.talents[x.id]||0)>0)) return false;
+  // tier rule after removal
+  const ranks=Object.assign({},S.talents); ranks[t.id]=r-1;
+  const maxTier=Math.max(0,...all.filter(x=>(ranks[x.id]||0)>0).map(x=>x.tier));
+  for(let tier=2; tier<=maxTier; tier++){
+    if(!all.some(x=>x.tier===tier && (ranks[x.id]||0)>0)) continue;
+    const below=all.filter(x=>x.tier<tier).reduce((a,x)=>a+(ranks[x.id]||0),0);
+    if(below<(tier-1)*5) return false;
+  }
+  return true;
+}
+function addPoint(t){ if(canAdd(t).ok){ S.talents[t.id]=(S.talents[t.id]||0)+1; S.example=false; commit(); } }
+function removePoint(t){ if(canRemove(t)){ S.talents[t.id]--; if(!S.talents[t.id]) delete S.talents[t.id]; commit(); } }
+function resetTree(ti){ classData(S.char.cls).trees[ti].talents.forEach(t=>delete S.talents[t.id]); commit(); }
+function trimToPoints(){ // when level drops, strip from deepest tiers
+  const all=allTalents(S.char.cls).sort((a,b)=>b.tier-a.tier);
+  let guard=200; while(spent()>totalPoints() && guard--){ const t=all.find(x=>(S.talents[x.id]||0)>0 && canRemove(x)); if(!t) break; removePoint(t); }
+}
+
+/* ================== Stat engine ================== */
+function effectTotals(state){
+  const tot={}; const add=(k,v)=>{ if(typeof v==="number"&&isFinite(v)) tot[k]=(tot[k]||0)+v; };
+  const tm=talentMap(state.char.cls);
+  for(const [id,r] of Object.entries(state.talents)){ const t=tm[id]; if(!t||!t.effects) continue;
+    t.effects.forEach(e=>{ const v=Array.isArray(e.v)? e.v[Math.min(r,e.v.length)-1] : e.v*r; add(e.k,v); }); }
+  const k=raceDataKey(state.char.race,state.char.faction);
+  const race=racesList().find(x=>x.id===k);
+  if(race) race.racials.forEach(rc=>{ if(!rc.effects) return; if(rc.type==="active" && !state.racialOn[rc.name]) return;
+    rc.effects.forEach(e=>add(e.k, Array.isArray(e.v)?e.v[e.v.length-1]:e.v)); });
+  return tot;
+}
+const GEAR_KEYS=["str","agi","sta","int","spi","armor","ap","rap","sp","heal","spd","crit","hit","scrit","shit","mp5","def","dodge","parry","block","bv","hp",
+  "sp_holy","sp_fire","sp_nature","sp_frost","sp_shadow","sp_arcane","haste","mana"];
+function gearSum(state){
+  const s={}; GEAR_KEYS.forEach(k=>s[k]=0);
+  [...SLOTS.map(sl=>slotView(state,sl)), state.other, ...(state.cons||[]).map(id=>CONS_BY_ID[id]).filter(c=>c&&c.rl<=(+state.char.level||60)).map(c=>c.st)].forEach(it=>{ if(!it) return; GEAR_KEYS.forEach(k=>{ const v=parseFloat(it[k]); if(isFinite(v)) s[k]+=v; }); });
+  return s;
+}
+/* ================== Level-aware base stats ==================
+   Forever client tables (forever_stats.json): base mana, health per Stamina, crit per Agility,
+   spell crit per Intellect (all per class and level), attack power per stat, armor constant.
+   Not in the client (server-side): base Str/Agi/Sta/Int/Spi, base health, base crit, dodge per Agility,
+   spirit regen. Those come from the player's own character sheet (calibration) when entered,
+   otherwise from an ESTIMATE that is labelled as such everywhere it is shown. */
+let FSTATS=null, CALIB={};
+const CLASS_L1={Warrior:[3,0,2,0,0],Paladin:[2,0,2,0,1],Hunter:[0,3,1,0,1],Rogue:[1,3,1,0,0],Priest:[0,0,0,2,3],Shaman:[1,0,1,1,2],Mage:[0,0,0,3,2],Warlock:[0,0,1,2,2],Druid:[1,0,0,2,2]};
+const HP_L1={Warrior:20,Paladin:28,Hunter:46,Rogue:45,Priest:52,Shaman:37,Mage:32,Warlock:43,Druid:34};
+const EST_AP={Warrior:[3,-20],Paladin:[3,-20],Hunter:[2,-20],Rogue:[2,-20],Shaman:[2,-20],Druid:[3,-20],Priest:[0,-10],Mage:[0,-10],Warlock:[0,-10]};
+const EST_RAP={Hunter:[2,-10],Rogue:[1,-10],Warrior:[1,-10]};
+const EST_DODGE_RATE={Warrior:[3.9,20],Paladin:[4.6,20],Shaman:[4.6,20],Druid:[4.6,20],Mage:[12.9,20],Rogue:[1.1,14.5],Hunter:[1.8,26.5],Priest:[11,20],Warlock:[8.4,20]};
+const EST_DODGE_BASE={Warrior:0,Paladin:0.75,Hunter:0.64,Rogue:0,Priest:3,Shaman:1.75,Mage:3.25,Warlock:2,Druid:0.75};
+const EST_SCRIT_BASE={Paladin:3.7,Priest:2.97,Shaman:3.54,Mage:3.7,Warlock:3.18,Druid:3.33};
+function fLevel(cls,L){ const c=FSTATS&&FSTATS.classes[cls]; if(!c) return null; return c.levels[L]||c.levels[String(L)]||null; }
+function fClass(cls){ return (FSTATS&&FSTATS.classes[cls])||{apPerStr:0,apPerAgi:0,rapPerAgi:0,levels:{}}; }
+function calibKey(state){ return `${state.char.cls}|${raceDataKey(state.char.race,state.char.faction)}`; }
+/* estimate of what the server gives at level L (used only until the player's own sheet is entered) */
+function estimateBase(state,L){
+  const cls=state.char.cls, c=CLS[cls]; const rk=raceDataKey(state.char.race,state.char.faction); const m=RACE_MODS[rk]||[0,0,0,0,0];
+  const l1=CLASS_L1[cls]||[0,0,0,0,0], t=(L-1)/59, keys=["str","agi","sta","int","spi"], o={};
+  keys.forEach((k,i)=>{ const start=20+m[i]+l1[i], end=c.base[k]+m[i]; o[k]=Math.round(start+(end-start)*t); });
+  o.hp=Math.round((HP_L1[cls]||30)+(c.hp-(HP_L1[cls]||30))*Math.pow(t,1.35));
+  const ap=EST_AP[cls]||[0,-10], rap=EST_RAP[cls]||[0,-10];
+  o.apOff=ap[0]*L+ap[1]; o.rapOff=rap[0]*L+rap[1];
+  o.critBase=c.mcBase; o.scritBase=EST_SCRIT_BASE[cls]||0;
+  const dr=EST_DODGE_RATE[cls]||[4,20]; o.dodgePerAgi=1/(dr[0]*(60-L)/59+dr[1]*(L-1)/59); o.dodgeBase=EST_DODGE_BASE[cls]||0;
+  return o;
+}
+/* calibrated value for level L from the player's saved sheets (exact level, interpolated, or scaled) */
+function calibrated(state,L,key,est){
+  const pts=CALIB[calibKey(state)]; if(!pts) return null;
+  const lv=Object.keys(pts).map(Number).filter(l=>pts[l][key]!=null).sort((a,b)=>a-b); if(!lv.length) return null;
+  if(pts[L]&&pts[L][key]!=null) return {v:pts[L][key],how:"sheet"};
+  if(lv.length>=2){ let a=lv[0],b=lv[lv.length-1]; for(let i=0;i<lv.length-1;i++) if(lv[i]<=L&&lv[i+1]>=L){a=lv[i];b=lv[i+1];}
+    if(L<a){ b=lv[1]; } if(L>b){ a=lv[lv.length-2]; }
+    const va=pts[a][key], vb=pts[b][key]; return {v:va+(vb-va)*(L-a)/(b-a),how:"sheet-interp"}; }
+  const a=lv[0], ea=est(a), el=est(L);
+  return {v: ea? pts[a][key]*el/ea : pts[a][key], how:"sheet-scaled"};
+}
+function baseFor(state){
+  const L=Math.max(1,Math.min(60,+state.char.level||60)), cls=state.char.cls;
+  const E0=estimateBase(state,L), src={};
+  const pick=(key)=>{ const r=calibrated(state,L,key,lv=>estimateBase(state,lv)[key]); if(r){ src[key]=r.how; return r.v; } src[key]="estimate"; return E0[key]; };
+  const b={}; ["str","agi","sta","int","spi"].forEach(k=>b[k]=pick(k));
+  b.hp=pick("hp"); b.apOff=pick("apOff"); b.rapOff=pick("rapOff"); b.critBase=pick("critBase"); b.scritBase=pick("scritBase"); b.dodgeBase=pick("dodgeBase");
+  b.dodgePerAgi=E0.dodgePerAgi; src.dodgePerAgi="estimate";
+  const fl=fLevel(cls,L);
+  b.mana=fl?fl.mana:(CLS[cls].mana||0); src.mana=fl?"forever":"estimate";
+  b.hpPerSta=fl?fl.hpPerSta:10; b.critPerAgi=fl?fl.critPerAgi:1/(CLS[cls].mcAgi||20); b.scritPerInt=fl?fl.scritPerInt:(CLS[cls].scInt?1/CLS[cls].scInt:0);
+  src.critPerAgi=src.scritPerInt=src.hpPerSta=fl?"forever":"estimate";
+  if(state.baseOverride){ for(const [k,v] of Object.entries(state.baseOverride)){ if(v!=null&&isFinite(v)){ b[k]=v; src[k]="manual"; } } }
+  b.src=src; b.L=L;
+  return b;
+}
+/* how many levels above you the target is (0 = same level, 3 = raid boss); older saves stored an absolute level */
+function targetDiff(state){ const st=state.settings||{}; if(st.tdiff!=null) return Math.max(0,Math.min(3,+st.tdiff)); if(st.target) return Math.max(0,Math.min(3,+st.target-60)); return 3; }
+function targetLevel(state){ return Math.min(63,(+state.char.level||60)+targetDiff(state)); }
+function armorConstant(T){ const a=FSTATS&&FSTATS.armorConstant; return (a&&(a[T]||a[String(T)]))||400+85*T; }
+
+function compute(state, delta){
+  const c=CLS[state.char.cls]; const E=effectTotals(state); const G=gearSum(state); const B=baseFor(state);
+  const e=k=>E[k]||0; const lvl=+state.char.level||60;
+  if(delta) for(const k in delta) G[k]=(G[k]||0)+delta[k];
+  const P={};
+  PRIMARY.forEach(k=>{ P[k]=(B[k]+G[k])*(1+(e(k+"_pct")+e("all_stats_pct"))/100); });
+  const out={P};
+  // pools
+  const sta=P.sta, int=P.int;
+  out.hp=(B.hp + Math.min(sta,20) + Math.max(sta-20,0)*B.hpPerSta + G.hp)*(1+e("health_pct")/100);
+  out.mana=B.mana>0 ? (B.mana + Math.min(int,20) + Math.max(int-20,0)*15)*(1+e("mana_pct")/100) + G.mana : 0;
+  out.armor=(G.armor*(1+e("armor_items_pct")/100) + P.agi*2)*(1+e("armor_pct")/100);
+  // attack power
+  const FC=fClass(state.char.cls);
+  const apBase=P.str*FC.apPerStr + P.agi*FC.apPerAgi + B.apOff;
+  out.ap=(apBase + G.ap + int*e("ap_from_int_pct")/100)*(1+e("ap_pct")/100);
+  const rapBase=FC.rapPerAgi>0 ? P.agi*FC.rapPerAgi + B.rapOff : 0;
+  out.rap=(rapBase + G.rap)*(1+e("rap_pct")/100);
+  // crit / hit
+  out.mcrit=B.critBase + P.agi*B.critPerAgi + G.crit + e("melee_crit");
+  out.rcrit=B.critBase + P.agi*B.critPerAgi + G.crit + e("ranged_crit");
+  out.scrit=B.scritPerInt>0? B.scritBase + int*B.scritPerInt + G.scrit + G.crit + e("spell_crit") : 0; // Forever: gear crit counts for spells too
+  out.mhit=G.hit + e("melee_hit"); out.rhit=G.hit + e("ranged_hit"); out.shit=G.shit + G.hit + e("spell_hit");
+  out.sp=(G.sp + int*e("spellpower_from_int_pct")/100 + P.spi*e("spellpower_from_spi_pct")/100)*(1+e("sp_pct")/100);
+  out.healPow=out.sp + G.heal*(1+e("sp_pct")/100);
+  out.spDmg=out.sp + G.spd*(1+e("sp_pct")/100);
+  // defense
+  const def=lvl*5+G.def; const defBonus=(G.def)*0.04; out.def=def;
+  out.dodge=B.dodgeBase + P.agi*B.dodgePerAgi + G.dodge + e("dodge") + defBonus;
+  out.parry=c.parry? 5 + G.parry + e("parry") + defBonus : 0;
+  const hasShield=slotView(state,"Off Hand").wtype==="Shield";
+  out.block=c.block&&hasShield? 5 + G.block + e("block") + defBonus : 0;
+  out.bv=hasShield? (G.bv + P.str/20)*(1+e("block_value_pct")/100) : 0;
+  out.missTaken=5+defBonus;
+  // regen
+  const tick=c.reg[1]? c.reg[0] + P.spi/c.reg[1] : 0;
+  out.spiMp5=tick*2.5; out.mp5=G.mp5 + e("mp5");
+  out.regenIdle=out.mp5 + out.spiMp5; out.regenCast=out.mp5 + out.spiMp5*e("casting_regen_pct")/100;
+  // target tables
+  const T=targetLevel(state); const diff=targetDiff(state);
+  // Forever beta client: never miss a raid boss (+3) at 8% melee/ranged, 17% spells, 27% dual wield; same level 5% / 4% / 24%
+  const dd=Math.max(0,Math.min(3,diff));
+  const missY=[5,6,7,8][dd], missDW=[24,25,26,27][dd], tdodge=5+dd*0.5, glance=dd>=3?40:10+dd*10, glancePen=dd>=3?0.35:0.05+dd*0.1;
+  const sMiss=[4,5,6,17][dd];
+  // ----- melee
+  const mh=slotView(state,"Main Hand"), oh=slotView(state,"Off Hand");
+  const twoH=TWO_HAND.has(mh.wtype);
+  const wpn=(w)=>{ const mn=+w.wmin||0,mx=+w.wmax||0,sp=+w.wspd||0; return sp>0&&mx>0?{avg:(mn+mx)/2,spd:sp}:null; };
+  const MH=wpn(mh)||{avg:1.5,spd:2.0};
+  const OHw=(c.dw && oh && !["Shield","Held In Off-hand","—",undefined,""].includes(oh.wtype)) ? wpn(oh) : null;
+  const dmgMult=1+(e("phys_dmg_pct")+e("melee_dmg_pct")+(twoH?e("twohand_dmg_pct"):e("onehand_dmg_pct")))/100;
+  const haste=1+(e("attack_speed_pct")+G.haste)/100;
+  const critMult=2*(1+e("crit_dmg_bonus_pct")/100);
+  const white=(w,isOH,miss)=>{ if(!w) return 0;
+    const hitDmg=(w.avg + out.ap/14*w.spd)*(isOH?0.5*(1+e("offhand_dmg_pct")/100):1);
+    const m=Math.max(0,miss-out.mhit)/100, d=tdodge/100, g=glance/100;
+    const cr=Math.max(0,Math.min(out.mcrit/100,1-m-d-g));
+    const avg=g*(1-glancePen)+cr*2+Math.max(0,1-m-d-g-cr);
+    return hitDmg*avg/w.spd*haste; };
+  const wMH=white(MH,false,OHw?missDW:missY), wOH=white(OHw,true,missDW);
+  const yHit=(MH.avg + out.ap/14*MH.spd); const ym=Math.max(0,missY-out.mhit)/100, yd=tdodge/100;
+  const yAvg=(1-ym-yd)*(1 + Math.min(out.mcrit/100,1)*(critMult-1));
+  const yellow=yHit/MH.spd*yAvg*(c.abil-1);
+  out.meleeDps=(wMH+wOH+yellow)*dmgMult;
+  // ----- ranged
+  const rg=slotView(state,"Ranged / Relic"); const RW=["Bow","Gun","Crossbow","Thrown"].includes(rg.wtype)||!rg.wtype?wpn(rg):null;
+  if(c.rap!=="none" && RW){
+    const m=Math.max(0,missY-out.rhit)/100; const cr=Math.min(out.rcrit/100,1-m);
+    const per=(RW.avg + out.rap/14*RW.spd)*((1-m)+cr*(critMult-1));
+    const mult=1+(e("phys_dmg_pct")+e("ranged_dmg_pct"))/100;
+    const pet=state.char.cls==="Hunter"? 110*(1+e("pet_dmg_pct")/100) : 0;
+    out.rangedDps=per/RW.spd*(c.rabil||1)*mult + pet;
+  } else out.rangedDps=0;
+  // ----- spell
+  const dom=dominantTree(state);
+  const sp=(SPELL[state.char.cls]&&(SPELL[state.char.cls][dom]||SPELL[state.char.cls].find(Boolean)))||DEFAULT_SPELL[state.char.cls]||null;
+  out.spellName=sp?sp.n:null;
+  if(sp){
+    const cast=sp.cast/(1+e("cast_speed_pct")/100);
+    const hit=1-Math.max(0,sMiss-out.shit)/100;
+    const cm=0.5*(1+e("spell_crit_dmg_bonus_pct")/100);
+    const mult=1+(e("spell_dmg_pct")+e(sp.s+"_dmg_pct"))/100;
+    out.spellDps=(sp.avg+(out.spDmg+(G["sp_"+sp.s]||0))*sp.co)*mult*hit*(1+Math.min(out.scrit,100)/100*cm)/cast;
+    const burn=sp.m/cast - out.regenCast/5; out.spellOom=burn>0? out.mana/burn : Infinity;
+  } else { out.spellDps=0; out.spellOom=0; }
+  // ----- healing
+  const h=HEAL[state.char.cls]; out.healName=h?h.n:null;
+  if(h){
+    out.hps=(h.avg+out.healPow*h.co)*(1+e("healing_pct")/100)*(1+Math.min(out.scrit,100)/100*0.5)/h.cast;
+    const burn=h.m/h.cast - out.regenCast/5; out.healOom=burn>0? out.mana/burn : Infinity;
+  } else { out.hps=0; out.healOom=0; }
+  // ----- tank
+  const armorDR=Math.min(0.75, out.armor/(out.armor+armorConstant(T)));
+  out.armorDR=armorDR*100;
+  out.avoid=out.missTaken+out.dodge+out.parry+out.block;
+  const dt=1+e("damage_taken_pct")/100;
+  out.ehp=out.hp/((1-armorDR)*dt);
+  out.critImmune=(G.def>=140);
+  out.tank=out.ehp*(1+Math.min(out.avoid,70)/100)/1000;
+  out.spiritRegenNote=tick;
+  out.E=E; out.G=G; out.B=B;
+  return out;
+}
+function dominantTree(state){
+  const sp=specOf(state); if(sp!==null) return sp;
+  const cd=classData(state.char.cls); let best=0,bv=-1;
+  cd.trees.forEach((t,i)=>{ const p=t.talents.reduce((a,x)=>a+(state.talents[x.id]||0),0); if(p>bv){bv=p;best=i;} });
+  return best;
+}
+function roleOf(state){
+  if(state.settings.role && state.settings.role!=="auto") return state.settings.role;
+  return (TREE_ROLE[state.char.cls]||["melee"])[dominantTree(state)];
+}
+const METRIC={melee:o=>o.meleeDps, ranged:o=>o.rangedDps, spell:o=>o.spellDps, heal:o=>o.hps, tank:o=>o.tank};
+function rolesFor(cls){
+  const set=new Set(["melee"]); if(CLS[cls].rap!=="none") set.add("ranged");
+  if(SPELL[cls]||DEFAULT_SPELL[cls]) set.add("spell"); if(HEAL[cls]) set.add("heal"); if(CLS[cls].parry||CLS[cls].block||cls==="Druid") set.add("tank");
+  if(cls==="Mage"||cls==="Warlock"||cls==="Priest") set.delete("melee");
+  return ["melee","ranged","spell","heal","tank"].filter(r=>set.has(r));
+}
+function statWeights(state, role){
+  const f=METRIC[role]; const base=f(compute(state)); if(!base) return [];
+  const probes=[["str",10],["agi",10],["sta",10],["int",10],["spi",10],["ap",20],["sp",12],["heal",22],["crit",1],["hit",1],["scrit",1],["shit",1],["mp5",4],["armor",100],["def",10],["dodge",1]];
+  return probes.map(([k,d])=>{ const v=f(compute(state,{[k]:d}))-base; return {k,d,v}; }).filter(x=>x.v>1e-6);
+}
+
+/* ================== Rendering ================== */
+const qs=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=(n,d=0)=>isFinite(n)?Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}):"∞";
+function toast(msg){ const t=qs("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,2200); }
+function commit(){ persist(); render(); }
+
+function crestSVG(f){
+  const a=f==="Alliance";
+  const fill=a?"#2b4f9e":"#8e231b", rim="#e0b95c";
+  const sym=a? '<path d="M50 22 L58 40 L50 70 L42 40 Z" fill="#e0b95c"/><path d="M30 38 Q50 30 70 38 L66 46 Q50 40 34 46 Z" fill="#f4d98a"/>'
+             : '<path d="M30 30 L50 74 L70 30 L60 36 L50 58 L40 36 Z" fill="#e0b95c"/><circle cx="50" cy="30" r="5" fill="#f4d98a"/>';
+  return `<svg viewBox="0 0 100 100" aria-label="${f} crest"><path d="M50 4 L90 18 L86 58 Q80 82 50 96 Q20 82 14 58 L10 18 Z" fill="${fill}" stroke="${rim}" stroke-width="3"/><path d="M50 11 L83 22 L80 57 Q75 77 50 89 Q25 77 20 57 L17 22 Z" fill="none" stroke="#0006" stroke-width="2"/>${sym}</svg>`;
+}
+
+function renderPlate(){
+  const el=qs("#plateSec"); const c=S.char;
+  document.body.dataset.faction=c.faction||"Alliance";
+  document.documentElement.style.setProperty("--cls", CLASS_COLOR[c.cls]||"#e0b95c");
+  if(!c.locked || ui.editing){ renderEditor(el); return; }
+  const tp=classData(c.cls).trees.map((t,i)=>treePoints(i));
+  const dom=dominantTree(S); const tname=(classData(c.cls).trees[dom]||{}).name||"";
+  el.innerHTML=`<div class="plate">
+    <div class="crest portrait"><img class="ci" src="${clsIcon(c.cls)}" alt="${esc(c.cls)}"><img class="ri" src="${ICON(raceInfo().icon||'inv_misc_questionmark')}" alt="${esc(RACE_NAME[c.race])}"></div>
+    <div class="plate-main">
+      <span class="eyebrow">${S.example?"Example character":"World of Warcraft: Forever"}</span>
+      <h1 class="charname">${esc(c.first)} ${esc(c.last)}</h1>
+      <div class="charline"><span>Level ${c.level}</span><span>${esc(RACE_NAME[c.race])}</span><span class="cls">${esc(c.cls)}</span>
+        <span class="pill fac">${esc(c.faction)}</span>${S.example?'<span class="pill warn">Example data</span>':""}</div>
+      <div class="specpick"><span class="lbl">Specialization</span>
+        <div class="spec-seg" role="radiogroup" aria-label="Specialization">${classData(c.cls).trees.map((t,i)=>`<button type="button" role="radio" aria-checked="${specOf(S)===i}" data-spec="${i}"><img src="${ICON(t.icon)}" alt="">${esc(t.name)}<small>${esc(ROLE_LABEL[(TREE_ROLE[c.cls]||[])[i]]||"")}</small></button>`).join("")}</div></div>
+      <div class="specline">${tp.join(" / ")} · ${specOf(S)!==null?esc(specName(S,specOf(S)))+" spec":spent()?esc(tname)+" focus":"No talents spent"} · ${totalPoints()-spent()} points left</div>
+    </div>
+    <div class="plate-side">
+      <div class="lvl"><label class="lbl" for="lvl">Level</label><input id="lvl" type="number" min="10" max="60" value="${c.level}"></div>
+      <button class="btn" id="editRC">Change Race / Class</button>
+      <button class="btn ghost small" id="newChar">New character</button>
+    </div></div>${profBarHTML()}`;
+  wireProfBar(el);
+  el.querySelectorAll("[data-spec]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.spec; if(specOf(S)===i) return;
+    S.char.spec=i; S.settings.role="auto"; S.example=false;
+    if(!spent()){ applySpecBuild(S,i); commit(); toast(`Loaded the recommended ${specName(S,i)} build`); }
+    else { ui.confirm="spec"; commit(); } });
+  if(ui.confirm==="spec"&&specOf(S)!==null){
+    el.insertAdjacentHTML("beforeend",`<div class="editor"><div class="confirm" style="grid-column:1/-1">Load the recommended ${esc(specName(S,specOf(S)))} build? It replaces the talents you've spent. <button class="btn small primary" id="specYes">Load build</button><button class="btn small ghost" id="specNo">Keep my talents</button></div></div>`);
+    qs("#specYes").onclick=()=>{ applySpecBuild(S,specOf(S)); ui.confirm=null; commit(); toast(`Loaded the recommended ${specName(S,specOf(S))} build`); };
+    qs("#specNo").onclick=()=>{ ui.confirm=null; render(); };
+  }
+  const setLvl=e=>{ const raw=parseInt(e.target.value); if(!raw) return; const v=Math.max(10,Math.min(60,raw)); if(v===S.char.level){ e.target.value=v; return; } S.char.level=v; trimToPoints(); commit(); toast(`Level set to ${v}`); };
+  qs("#lvl").onchange=setLvl;
+  qs("#lvl").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); setLvl(e); } };
+  qs("#editRC").onclick=()=>{ ui.editing=true; ui.draft={...S.char}; ui.confirm=null; render(); };
+  qs("#newChar").onclick=()=>{ ui.confirm="new"; render(); };
+  if(ui.confirm==="new"){
+    el.insertAdjacentHTML("beforeend",`<div class="editor"><div class="confirm" style="grid-column:1/-1">Start a new character? Current talents and gear are cleared (saved builds stay).
+      <button class="btn small primary" id="cNew">Start new</button><button class="btn small ghost" id="cCancel">Cancel</button></div></div>`);
+    qs("#cNew").onclick=()=>{ S={v:3,example:false,char:{first:"",last:"",faction:"Alliance",race:"",cls:"",level:60,locked:false},talents:{},gear:blankGear(),baseOverride:null,other:{name:"Buffs & consumables"},racialOn:{},settings:{target:63,role:"auto"}}; ui.confirm=null; ui.editing=false; ui.draft=null; commit(); };
+    qs("#cCancel").onclick=()=>{ ui.confirm=null; render(); };
+  }
+}
+function renderEditor(el){
+  const fresh=!S.char.locked; const d=ui.draft||(ui.draft={...S.char});
+  const races=RACES[d.faction]||RACES.Alliance;
+  const validCls=d.race? (CLASSES_BY_RACE[raceDataKey(d.race,d.faction)]||CLASSES) : CLASSES;
+  el.innerHTML=`<div class="editor">
+    <div style="grid-column:1/-1;display:flex;gap:14px;align-items:center"><div class="crest" style="width:52px;height:52px">${crestSVG(d.faction)}</div>
+      <div><span class="eyebrow">${fresh?"Create your character":"Change race / class"}</span><h2 style="font-size:22px">${fresh?"Forge a new hero":esc(d.first+" "+d.last)}</h2></div></div>
+    <div class="field"><label for="fn">First name</label><input id="fn" type="text" maxlength="24" value="${esc(d.first)}" ${fresh?"":"disabled"}></div>
+    <div class="field"><label for="ln">Last name</label><input id="ln" type="text" maxlength="24" value="${esc(d.last)}" ${fresh?"":"disabled"}></div>
+    <div class="field"><span class="lbl">Faction</span><div class="faction-toggle" role="group" aria-label="Faction">
+      <button type="button" data-f="Alliance" aria-pressed="${d.faction==="Alliance"}">Alliance</button><button type="button" data-f="Horde" aria-pressed="${d.faction==="Horde"}">Horde</button></div></div>
+    <div class="field"><label for="race">Race</label><select id="race"><option value="">Choose race…</option>${races.map(([k,n])=>`<option value="${k}" ${d.race===k?"selected":""}>${n}${k==="skyborne"?` (${d.faction==="Horde"?"Windshaper":"High Order"})`:""}</option>`).join("")}</select></div>
+    <div class="field"><label for="cls">Class</label><select id="cls"><option value="">Choose class…</option>${CLASSES.map(n=>{const ok=validCls.includes(n);return `<option value="${n}" ${d.cls===n?"selected":""} ${ok?"":"disabled"}>${n}${ok?"":" (not available)"}</option>`;}).join("")}</select></div>
+    <div class="editor-actions">
+      <button class="btn primary" id="lockIn">${fresh?"Create character":"Apply changes"}</button>
+      ${fresh?"":'<button class="btn ghost" id="cancelEd">Cancel</button>'}
+      <span class="note" id="edNote">${fresh?"Name, race and class lock once created. Use Change Race / Class to edit them later.":"Name stays locked. Changing class clears talents."}</span>
+    </div>
+    ${ui.confirm==="cls"?`<div class="confirm" style="grid-column:1/-1">Switching to ${esc(d.cls)} clears your ${esc(S.char.cls)} talents. Gear stays. <button class="btn small primary" id="cYes">Switch class</button><button class="btn small ghost" id="cNo">Keep ${esc(S.char.cls)}</button></div>`:""}
+  </div>`;
+  const fn=qs("#fn"), ln=qs("#ln");
+  fn.oninput=e=>d.first=e.target.value; ln.oninput=e=>d.last=e.target.value;
+  el.querySelectorAll(".faction-toggle button").forEach(b=>b.onclick=()=>{ if(d.faction===b.dataset.f) return; d.faction=b.dataset.f; if(d.race!=="skyborne") d.race=""; const v=CLASSES_BY_RACE[raceDataKey(d.race,d.faction)]; if(d.race&&v&&!v.includes(d.cls)) d.cls=""; render(); });
+  qs("#race").onchange=e=>{ d.race=e.target.value; const v=CLASSES_BY_RACE[raceDataKey(d.race,d.faction)]; if(v&&d.cls&&!v.includes(d.cls)) d.cls=""; render(); };
+  qs("#cls").onchange=e=>{ d.cls=e.target.value; ui.confirm=null; render(); };
+  const apply=()=>{ const clsChanged=S.char.cls&&S.char.cls!==d.cls; if(clsChanged){ S.talents={}; S.baseOverride=null; S.settings.role="auto"; d.spec=null; }
+    S.char={...S.char,...d,first:d.first.trim(),last:d.last.trim(),locked:true}; S.example=false; S.racialOn={}; ui.editing=false; ui.draft=null; ui.confirm=null; ui.sel=null; cleanupUnavailable(); commit(); };
+  qs("#lockIn").onclick=()=>{
+    if(!d.first.trim()){ qs("#edNote").innerHTML='<span class="bad">Enter a first name.</span>'; fn.focus(); return; }
+    if(!d.race||!d.cls){ qs("#edNote").innerHTML='<span class="bad">Choose a race and a class.</span>'; return; }
+    if(S.char.locked && S.char.cls!==d.cls && spent()>0){ ui.confirm="cls"; render(); return; }
+    apply(); };
+  if(qs("#cancelEd")) qs("#cancelEd").onclick=()=>{ ui.editing=false; ui.draft=null; ui.confirm=null; render(); };
+  if(qs("#cYes")) qs("#cYes").onclick=apply;
+  if(qs("#cNo")) qs("#cNo").onclick=()=>{ ui.confirm=null; d.cls=S.char.cls; render(); };
+}
+
+function renderRacials(){
+  const el=qs("#racials");
+  if(!S.char.race){ el.innerHTML=""; return; }
+  const r=raceInfo(); const list=(r.racials||[]).slice(0,4);
+  if(!list.length){ el.innerHTML=`<div class="frame racial" style="grid-column:1/-1"><span class="muted">Racial data for ${esc(RACE_NAME[S.char.race])} hasn't loaded.</span></div>`; return; }
+  el.innerHTML=list.map((rc,i)=>`<article class="frame racial">
+    <div class="meta"><span class="tag ${rc.type==="active"?"active":"passive"}">${rc.type==="active"?"Active":"Passive"}${rc.cd?" · "+esc(rc.cd):""}</span>${rc.src&&rc.src!=="forever"?`<span class="tag src">${rc.src==="classic"?"Classic value":"Unconfirmed"}</span>`:""}</div>
+    <div class="rhead"><img src="${ICON(rc.icon)}" alt=""><h3>${esc(rc.name)}</h3></div><div class="desc">${esc(rc.desc)}</div>
+    ${rc.type==="active"&&rc.effects&&rc.effects.length?`<label class="switch"><input type="checkbox" id="rac${i}" data-n="${esc(rc.name)}" ${S.racialOn[rc.name]?"checked":""}> Include in stat calc</label>`:""}
+  </article>`).join("");
+  el.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.onchange=()=>{ S.racialOn[cb.dataset.n]=cb.checked; commit(); });
+}
+
+function hue(str){ let h=0; for(const ch of str) h=(h*31+ch.charCodeAt(0))%360; return h; }
+function initials(n){ return n.replace(/[^A-Za-z ]/g,"").split(/\s+/).filter(w=>!/^(of|the|and)$/i.test(w)).slice(0,2).map(w=>w[0]).join("").toUpperCase(); }
+
+function renderTalents(v){
+  const cd=classData(S.char.cls);
+  if(!S.char.cls){ v.innerHTML=`<div class="empty">Create your character to open the talent trees.</div>`; return; }
+  const total=totalPoints(), used=spent();
+  v.innerHTML=`<div class="frame tbar">
+      <div class="points"><span><span class="lbl">Points spent</span> <b>${used}</b><span class="muted"> / ${total}</span></span>
+        <span><span class="lbl">Remaining</span> <b style="color:${total-used?"var(--green)":"var(--muted)"}">${total-used}</b></span>
+        <span class="mono muted">${cd.trees.map((t,i)=>treePoints(i)).join(" / ")}</span></div>
+      <div class="legend"><span><span class="k st new">N</span>New in Forever</span><span><span class="k st changed">C</span>Changed</span><span><span class="k st moved">M</span>Moved</span>
+        <span>Click: add · Right-click or Shift-click: remove</span>
+        ${specOf(S)!==null?`<button class="btn small" id="loadSpec" title="${esc(specBuildNote(S,specOf(S)))}">Load recommended ${esc(specName(S,specOf(S)))} build</button>`:""}
+        <button class="btn small ghost" id="resetAll">Reset all</button></div>
+    </div>
+    <div class="trees" id="trees"></div>
+    <div class="frame inspector" id="insp"></div>`;
+  qs("#resetAll").onclick=()=>{ S.talents={}; commit(); };
+  if(qs("#loadSpec")) qs("#loadSpec").onclick=()=>{ applySpecBuild(S,specOf(S)); commit(); toast(specBuildNote(S,specOf(S))); };
+  const host=qs("#trees");
+  cd.trees.forEach((tree,ti)=>{
+    const color=CLASS_COLOR[S.char.cls];
+    const sec=document.createElement("section"); sec.className="frame tree";
+    const h=hue(tree.name);
+    sec.innerHTML=`<div class="tree-bg" style="background-image:url('assets/bg/${tree.bg}.jpg')"></div>
+      <div class="tree-head"><span class="tn"><img src="${ICON(tree.icon)}" alt=""><h3>${esc(tree.name)}</h3></span><span class="tp">${treePoints(ti)}</span></div>
+      <div class="tree-role">${esc(ROLE_LABEL[(TREE_ROLE[S.char.cls]||[])[ti]]||tree.role||"")}${tree.role?" · "+esc(tree.role):""}</div>
+      <div class="grid-wrap"><div class="tgrid"></div></div>
+      <div class="tree-foot"><button class="btn small ghost" data-reset="${ti}">Reset ${esc(tree.name)}</button></div>`;
+    const grid=sec.querySelector(".tgrid");
+    const maxTier=Math.max(7,...tree.talents.map(t=>t.tier));
+    grid.style.gridTemplateRows=`repeat(${maxTier},var(--tile))`;
+    tree.talents.forEach(t0=>{
+      const t=Object.assign({ti},t0); const r=S.talents[t.id]||0; const ca=canAdd(t);
+      const b=document.createElement("button"); b.type="button";
+      b.className="tal"+(r>=t.max?" max":r>0?" has":ca.ok?" avail":"")+(ui.sel===t.id?" sel":"");
+      b.style.gridRow=t.tier; b.style.gridColumn=t.col;
+      b.setAttribute("aria-label",`${t.name}, rank ${r} of ${t.max}`);
+      const stl=STATUS_LBL[t.status];
+      b.innerHTML=`<img src="${ICON(t.icon)}" alt="" loading="lazy" draggable="false"><span class="rk">${r}/${t.max}</span>${stl?`<span class="st ${stl[1]}" title="${stl[2]}">${stl[0]}</span>`:""}`;
+      b.onclick=ev=>{ ui.sel=t.id; if(ev.shiftKey) removePoint(t); else if(canAdd(t).ok) addPoint(t); else render(); };
+      b.oncontextmenu=ev=>{ ev.preventDefault(); ui.sel=t.id; removePoint(t); render(); };
+      b.onmouseenter=ev=>showTip(t,ev); b.onmousemove=moveTip; b.onmouseleave=hideTip; b.onfocus=()=>{};
+      grid.appendChild(b);
+    });
+    // arrows
+    const tile=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tile"))||46;
+    const gap=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gap"))||14;
+    const ids={}; tree.talents.forEach(t=>ids[t.id]=t);
+    const cx=c=>(c-1)*(tile+gap)+tile/2, cy=r=>(r-1)*(tile+gap)+tile/2;
+    let paths="";
+    tree.talents.filter(t=>t.req&&ids[t.req]).forEach(t=>{
+      const p=ids[t.req]; const on=(S.talents[p.id]||0)>=p.max; const col=on?"#e0b95c":"#5a5a5a";
+      let d;
+      if(p.tier===t.tier){ const dir=t.col>p.col?1:-1; d=`M${cx(p.col)+dir*tile/2} ${cy(p.tier)} L${cx(t.col)-dir*(tile/2+3)} ${cy(t.tier)}`; }
+      else if(p.col===t.col){ d=`M${cx(p.col)} ${cy(p.tier)+tile/2} L${cx(t.col)} ${cy(t.tier)-tile/2-3}`; }
+      else { d=`M${cx(p.col)+(t.col>p.col?tile/2:-tile/2)} ${cy(p.tier)} L${cx(t.col)} ${cy(p.tier)} L${cx(t.col)} ${cy(t.tier)-tile/2-3}`; }
+      paths+=`<path d="${d}" stroke="${col}" stroke-width="4" fill="none" marker-end="url(#ah${on?1:0})" opacity=".95"/>`;
+    });
+    grid.insertAdjacentHTML("afterbegin",`<svg class="arrows"><defs><marker id="ah1" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#e0b95c"/></marker><marker id="ah0" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#5a5a5a"/></marker></defs>${paths}</svg>`);
+    sec.querySelector("[data-reset]").onclick=()=>resetTree(ti);
+    host.appendChild(sec);
+  });
+  renderInspector();
+}
+function tipHTML(t){
+  const r=S.talents[t.id]||0; const ca=canAdd(t); const tree=classData(S.char.cls).trees[t.ti];
+  let h=`<h4>${esc(t.name)}</h4><div class="r">Rank ${r}/${t.max}${t.passive?"":" · Active ability"}</div>`;
+  if(t.cost) h+=`<div class="cost">${t.cost.split("|").map(x=>`<span>${esc(x.trim())}</span>`).join("")}</div>`;
+  if(r>0) h+=`<div class="t">${esc(t.ranks[r-1])}</div>`;
+  if(r<t.max){ if(r>0) h+=`<div class="n">Next rank:</div>`; h+=`<div class="t">${esc(t.ranks[r]||t.ranks[0])}</div>`; }
+  if(!ca.ok && ca.reasons && r<t.max) ca.reasons.forEach(x=>h+=`<div class="q">${esc(x)}</div>`);
+  h+=classicNote(t,"tip");
+  if(t.effects&&t.effects.length) h+=`<div class="h">Counted in the character sheet</div>`;
+  return h;
+}
+function classicNote(t,mode){
+  const st=STATUS_LBL[t.status]; const col={new:"#4fd16a",changed:"#f0a83a",moved:"#6fb7ff"}[t.status];
+  let h="";
+  if(st) h+=`<span class="badge" style="background:${col}">${st[2]}</span>`; else h+=`<span class="muted" style="font-size:12px">Same as Classic</span>`;
+  if(t.renamed) h+=` <span class="muted" style="font-size:12px">Classic name: ${esc(t.renamed)}</span>`;
+  if(t.status==="changed"&&t.classicText) h+=`<div style="margin-top:3px">Classic rank 1${t.classicMax&&t.classicMax!==t.max?` (${t.classicMax} ranks)`:""}: ${esc(t.classicText)}</div>`;
+  if(t.hotfix) h+=`<div style="margin-top:3px;color:#5ec8ff">Hotfixed: ${esc(typeof t.hotfix==="string"?t.hotfix:JSON.stringify(t.hotfix))}</div>`;
+  return mode==="tip"?`<div class="cl">${h}</div>`:`<div class="note" style="margin-top:4px">${h}</div>`;
+}
+function showTip(t,ev){ if(matchMedia("(hover: none)").matches) return; const el=qs("#tip"); el.innerHTML=tipHTML(t); el.hidden=false; moveTip(ev); }
+function moveTip(ev){ const el=qs("#tip"); const w=el.offsetWidth,h=el.offsetHeight; let x=ev.clientX+18,y=ev.clientY+14; if(x+w>innerWidth-8) x=ev.clientX-w-18; if(y+h>innerHeight-8) y=innerHeight-h-8; el.style.left=x+"px"; el.style.top=Math.max(8,y)+"px"; }
+function hideTip(){ qs("#tip").hidden=true; }
+function renderInspector(){
+  const el=qs("#insp"); if(!el) return; const tm=talentMap(S.char.cls); const t=ui.sel&&tm[ui.sel];
+  if(!t){ el.innerHTML=`<div class="insp-body"><h3>Select a talent</h3><div class="muted">Tap or hover any talent to read its ranks. Tiers unlock every 5 points spent in that tree, and a talent with an arrow needs its prerequisite fully trained first.</div></div>`; return; }
+  const r=S.talents[t.id]||0; const ca=canAdd(t); const tree=classData(S.char.cls).trees[t.ti];
+  el.innerHTML=`<div class="insp-body"><div class="insp-head"><img src="${ICON(t.icon)}" alt=""><div><h3>${esc(t.name)}</h3><div class="insp-rank">Rank ${r}/${t.max} · ${esc(tree.name)} · Tier ${t.tier} (needs ${(t.tier-1)*5} pts in tree)${t.cost?" · "+esc(t.cost):""}</div></div></div>
+    ${r>0?`<div class="insp-text">${esc(t.ranks[r-1])}</div>`:""}
+    ${r<t.max?`<div class="insp-next"><span class="muted">${r>0?"Next rank: ":"Rank 1: "}</span><b>${esc(t.ranks[r]||"")}</b></div>`:""}
+    ${!ca.ok&&ca.reasons&&r<t.max?ca.reasons.map(x=>`<div class="insp-req">${esc(x)}</div>`).join(""):""}
+    ${classicNote(t,"insp")}
+  </div><div class="insp-btns"><button class="btn small" id="iMinus" ${canRemove(t)?"":"disabled"} aria-label="Remove point">− Remove</button><button class="btn small" id="iPlus" ${ca.ok?"":"disabled"} aria-label="Add point">+ Add</button></div>`;
+  qs("#iPlus").onclick=()=>addPoint(Object.assign({ti:t.ti},t)); qs("#iMinus").onclick=()=>removePoint(t);
+}
+
+/* ================== Specialization + recommended builds ================== */
+let SPEC_BUILDS={builds:{}};
+function specOf(state){ const s=state.char.spec; return (s===0||s===1||s===2)?s:null; }
+function specName(state,ti){ const t=classData(state.char.cls).trees[ti]; return t?t.name:""; }
+function withState(st,fn){ const keep=S; S=st; try{ return fn(); } finally { S=keep; } }
+/* load the recommended Forever build for a spec, then fit it to the character's level */
+function applySpecBuild(state,ti){
+  return withState(state,()=>{
+    const cd=classData(S.char.cls), tree=cd.trees[ti]; if(!tree) return false;
+    const b=((SPEC_BUILDS.builds||{})[S.char.cls]||{})[tree.name];
+    S.talents=b?{...b.talents}:{};
+    const all=allTalents(S.char.cls);
+    // top up to 51 (a couple of popular builds leave points unspent): main tree first, then the others
+    let guard=200;
+    while(spent()<51 && guard--){
+      const opts=all.filter(t=>canAddIgnoringLevel(t)).sort((a,b)=>(a.ti===ti?0:1)-(b.ti===ti?0:1)||(b.effects&&b.effects.length?1:0)-(a.effects&&a.effects.length?1:0)||a.tier-b.tier);
+      if(!opts.length) break; S.talents[opts[0].id]=(S.talents[opts[0].id]||0)+1;
+    }
+    trimForSpec(ti);
+    return !!b;
+  });
+}
+function canAddIgnoringLevel(t){ const r=S.talents[t.id]||0; if(r>=t.max) return false; if(treePoints(t.ti)<(t.tier-1)*5) return false;
+  if(t.req){ const p=talentMap(S.char.cls)[t.req]; if(p&&(S.talents[p.id]||0)<p.max) return false; } return true; }
+/* below level 60: give back support-tree points first, then the deepest points of the main tree */
+function trimForSpec(ti){
+  let guard=300;
+  while(spent()>totalPoints() && guard--){
+    const all=allTalents(S.char.cls).filter(t=>(S.talents[t.id]||0)>0&&canRemove(t));
+    if(!all.length) break;
+    all.sort((a,b)=>(a.ti===ti?1:0)-(b.ti===ti?1:0)||b.tier-a.tier);
+    const t=all[0]; S.talents[t.id]--; if(!S.talents[t.id]) delete S.talents[t.id];
+  }
+}
+function specBuildNote(state,ti){
+  const t=classData(state.char.cls).trees[ti]; const b=t&&((SPEC_BUILDS.builds||{})[state.char.cls]||{})[t.name];
+  return b?`Most-used complete ${t.name} build on talentsforever.com (${b.pts.join("/")}), ${SPEC_BUILDS.window||"Forever beta"}`:"No published Forever build for this spec yet";
+}
+
+/* ================== Profession planner: judged on the class and spec at level 60 ================== */
+const PLAN={cache:{},running:false,tier:"pre"};
+let AUTO_SRC=null;       // gear-source letters "Fill best gear" may use
+let AUTO_NO_RAID=false;   // when set, auto-gear skips raid drops (pre-raid planning)
+function planKey(spec){ return [PLAN.tier,S.char.cls,raceDataKey(S.char.race,S.char.faction),spec,JSON.stringify(CALIB[calibKey(S)]||{})].join("|"); }
+function planState(spec,prof){
+  const st={...JSON.parse(JSON.stringify(S)),example:false};
+  st.char={...st.char,level:60,spec}; st.gear=blankGear(); st.enchants={}; st.temps={}; st.cons=[]; st.other={}; st.talents={};
+  st.prof={p1:prof||"",p2:"",sec:{},spec:{}}; st.settings={...st.settings,role:"auto"}; st.baseOverride=null;
+  applySpecBuild(st,spec);
+  return st;
+}
+/* gear a planning character; with `from`, start from that outfit so each slot only changes when the total improves */
+function outfit(st,from){
+  const role=roleOf(st); AUTO_NO_RAID=PLAN.tier==="pre";
+  if(from){ st.gear=JSON.parse(JSON.stringify(from.gear)); st.enchants={...from.enchants}; }
+  try{ withState(st,()=>{ autoEquip(role,!!from); autoEquip(role,true); autoEnchant(role); }); } finally { AUTO_NO_RAID=false; }
+  return METRIC[role](compute(st));
+}
+async function runPlan(spec,onStep){
+  const key=planKey(spec); if(PLAN.cache[key]&&PLAN.cache[key].done) return PLAN.cache[key];
+  const res=PLAN.cache[key]={spec,role:null,base:0,rows:{},done:false};
+  const base=planState(spec,""); res.role=roleOf(base); res.base=outfit(base); res.baseGear=base.gear; res.baseEnch=base.enchants;
+  for(const p of CRAFT.primary||[]){
+    await new Promise(r=>setTimeout(r,0));
+    const st=planState(spec,p); const v=Math.max(res.base,outfit(st,base));
+    const unlocks=[];
+    for(const sl of SLOTS){
+      const a=(st.gear[sl]||{}).id, b=(base.gear[sl]||{}).id;
+      if(a&&a!==b){ const it=ITEM_BY_ID[a]; if(it&&!itemAvail(it,base).ok) unlocks.push(`${it.n} (${sl})`); }
+      const ea=st.enchants[sl], eb=base.enchants[sl];
+      if(ea&&ea!==eb){ const en=ENCH_BY_ID[ea]; if(en&&!enchantSources(en,base).length) unlocks.push(`${enchantText(en)} on ${sl}`); }
+    }
+    // best-in-slot pieces and enchants (available to anyone) that this profession could make itself
+    const makes=[];
+    for(const sl of SLOTS){ const it=itemFor(base,sl); if(it&&it.cr&&it.cr.p===p) makes.push(it.n);
+      const en=ENCH_BY_ID[base.enchants[sl]]; if(en&&(en.src||[]).some(x=>(x.k==="enchanter"&&p==="Enchanting")||(x.k==="item"&&x.p===p))) makes.push(enchantText(en)+" ("+sl+")"); }
+    res.rows[p]={d:unlocks.length?v-res.base:0,unlocks,makes};   // gains with nothing profession-only are just optimiser noise
+    if(onStep) onStep(res);
+  }
+  res.done=true; if(onStep) onStep(res);
+  return res;
+}
+function planUnit(role){ return role==="tank"?"":role==="heal"?" HPS":" DPS"; }
+function renderPlanner(el){
+  if(!el) return;
+  const trees=classData(S.char.cls).trees; const sel=specOf(S)??dominantTree(S);
+  const draw=()=>{
+    const R=trees.map((t,i)=>PLAN.cache[planKey(i)]);
+    const cur=R[sel];
+    const rows=(CRAFT.primary||[]).map(p=>{ const x=cur&&cur.rows[p]; return {p,d:x?x.d:null,unlocks:x?x.unlocks:[],makes:x?x.makes||[]:[]}; }).sort((a,b)=>(b.d??-1e9)-(a.d??-1e9)||b.makes.length-a.makes.length);
+    const top=Math.max(0.01,...rows.map(r=>r.d||0));
+    const pending=R.some(r=>!r||!r.done);
+    el.innerHTML=`<div class="plan-head"><h3>Which professions help a ${esc(specName(S,sel))} ${esc(S.char.cls)} most?</h3>
+      <div class="seg" role="tablist" aria-label="Gear level">${[["pre","Pre-raid gear"],["raid","Full raid gear"]].map(([k,l])=>`<button role="tab" data-tier="${k}" aria-selected="${PLAN.tier===k}">${l}</button>`).join("")}</div></div>
+      <div class="note">Judged for the class and spec as a whole, not your current level or gear: a level 60 ${esc(RACE_NAME[S.char.race]||"")} ${esc(S.char.cls)} with the recommended ${esc(specName(S,sel))} build, wearing the best ${PLAN.tier==="pre"?"pre-raid gear (item level 65 and below: dungeons, quests, crafting, reputation, PvP below rank 12)":"gear including raid drops and top PvP rewards"} and enchants it could get with no profession, then again with each profession. The number is how much that profession's soulbound crafts, profession-only items and self-only enchants add. ${pending?"<b>Working it out…</b>":""}</div>
+      <div class="pf-rank pf-plan"><div class="pf-r pf-head"><span></span><span></span><span class="lbl">${esc(specName(S,sel))}</span>${trees.map((t,i)=>`<span class="lbl ${i===sel?"on":""}">${esc(t.name)}</span>`).join("")}</div>
+      ${rows.map(r=>`<div class="pf-r ${hasProf(r.p)?"mine":""}"><img src="${IICON(PROF_ICON[r.p])}" alt=""><div class="pf-rn"><b>${esc(r.p)}${hasProf(r.p)?" · yours":""}</b><small>${r.d==null?"…":r.unlocks.length?"Unlocks "+esc(r.unlocks.slice(0,3).join(" · ")):r.makes.length?`No stat gain, but you'd make ${r.makes.length} of your best pieces yourself: ${esc(r.makes.slice(0,3).join(" · "))}${r.makes.length>3?"…":""}`:GATHERING.has(r.p)?"No gear of its own; gathers materials and saves gold":"Nothing it unlocks beats what's available without it"}</small></div>
+        <div class="wbar"><i style="width:${Math.max(1,(r.d||0)/top*100)}%"></i></div>
+        ${trees.map((t,i)=>{ const x=R[i]&&R[i].rows[r.p]; return `<span class="mono ${i===sel?"on":""}">${x?(x.d>0.05?"+"+x.d.toFixed(1):"0")+`<small>${planUnit(R[i].role)}</small>`:"…"}</span>`; }).join("")}</div>`).join("")}</div>`;
+    el.querySelectorAll("[data-tier]").forEach(b=>b.onclick=()=>{ if(PLAN.tier===b.dataset.tier) return; PLAN.tier=b.dataset.tier; renderPlanner(el); });
+  };
+  draw();
+  if(PLAN.running){ PLAN.again=true; return; }
+  PLAN.running=true;
+  (async()=>{ try{ do{ PLAN.again=false; const order=[sel,...trees.map((t,i)=>i).filter(i=>i!==sel)]; for(const i of order){ await runPlan(i,()=>{ if(ui.tab==="prof") draw(); }); } }while(PLAN.again); }
+    finally{ PLAN.running=false; if(ui.tab==="prof") draw(); } })();
+}
+
+/* ================== Professions: data, availability rules, enchants, consumables ================== */
+let CRAFT={primary:[],secondary:[],specs:{},enchants:[],consumables:[],temps:[]}, ENCH_BY_ID={}, CONS_BY_ID={}, TEMP_BY_ID={};
+const PROF_ICON={Alchemy:"trade_alchemy",Blacksmithing:"trade_blacksmithing",Enchanting:"trade_engraving",Engineering:"trade_engineering",Leatherworking:"trade_leatherworking",
+  Tailoring:"trade_tailoring",Herbalism:"spell_nature_naturetouchgrow",Mining:"trade_mining",Skinning:"inv_misc_pelt_wolf_01",Cooking:"inv_misc_food_15","First Aid":"spell_holy_sealofsacrifice",Fishing:"trade_fishing"};
+const GATHERING=new Set(["Herbalism","Mining","Skinning"]);
+function profState(state){ state=state||S; if(!state.prof) state.prof={p1:"",p2:"",sec:{},spec:{}}; state.prof.sec=state.prof.sec||{}; state.prof.spec=state.prof.spec||{}; return state.prof; }
+function hasProf(name,state){ const p=profState(state); return p.p1===name||p.p2===name||!!p.sec[name]; }
+function hasSpec(spec,state){ const p=profState(state); return Object.values(p.spec).includes(spec); }
+function specProf(spec){ for(const [p,l] of Object.entries(CRAFT.specs||{})) if(l.includes(spec)) return p; return null; }
+
+/* Can this character get this item?  Returns {ok, how, why} */
+function itemAvail(it,state){
+  state=state||S;
+  const fac=state.char.faction==="Horde"?"h":"a";
+  if(it.fx && it.fx!==fac){
+    const other=it.fx==="h"?"Horde":"Alliance";
+    if(it.b!==2) return {ok:false,why:`${other} only: ${state.char.faction} characters can't get it`};
+  }
+  for(const r of it.req||[]){
+    if(r.spec){ const pp=specProf(r.n); if(pp && !(hasProf(pp,state)&&hasSpec(r.n,state))) return {ok:false,why:`Requires ${r.n}`}; }
+    else if(!hasProf(r.n,state)) return {ok:false,why:`Requires ${r.n}${r.r?` (${r.r})`:""} to equip`};
+  }
+  if(it.cr){
+    const mine=hasProf(it.cr.p,state);
+    if(it.bop && !mine) return {ok:false,why:`Soulbound: only ${it.cr.p} can make it for themselves`};
+    return {ok:true,how:mine?`You craft it (${it.cr.p})`:`Buy or trade (crafted by ${it.cr.p}, Bind on Equip)`};
+  }
+  if(it.fx && it.fx!==fac) return {ok:true,how:`${it.fx==="h"?"Horde":"Alliance"} item: Bind on Equip, so buy it on the neutral auction house`};
+  return {ok:true,how:""};
+}
+/* Enchant sources this character can actually use */
+function enchantSources(en,state){
+  state=state||S; const out=[];
+  if(en.needs && !hasProf(en.needs.n,state)) return out;
+  for(const s of en.src||[]){
+    if(s.k==="enchanter") out.push(hasProf("Enchanting",state)?"You enchant it yourself":"An enchanter applies it");
+    else{
+      if(s.needs && !hasProf(s.needs.n,state)) continue;
+      if(s.bop && s.p && !hasProf(s.p,state)) continue;
+      out.push(s.p ? (hasProf(s.p,state)?`You make ${s.n}`:`Buy ${s.n} (${s.p})`) : `Use ${s.n}`);
+    }
+  }
+  return [...new Set(out)];
+}
+function enchantFits(en,it){
+  const r=en.rule; if(!r||!it) return false;
+  if(r.c!==it.c) return false;
+  if(r.inv>0 && !(r.inv & (1<<it.inv))) return false;
+  if(r.sub>0 && !(r.sub & (1<<it.sc))) return false;
+  return true;
+}
+function enchantOn(state,slot,it){
+  const id=state.enchants&&state.enchants[slot]; if(!id) return null;
+  const en=ENCH_BY_ID[id]; if(!en||!it||!enchantFits(en,it)) return null;
+  return en;
+}
+function enchantText(en){ return en.n.replace(/^Enchant: /,""); }
+/* Temporary weapon enhancements (sharpening stones, weightstones, oils, poisons, shaman imbues, imbue scrolls).
+   They don't touch the permanent enchant: a weapon can have one enchant AND one temporary enhancement.
+   A new temporary one replaces the old temporary one. */
+const TEMP_SLOTS=new Set(["Main Hand","Off Hand"]);
+const TEMP_KIND={stone:"Stone",oil:"Oil",poison:"Poison",imbue:"Shaman imbue",other:"Scroll / coating"};
+function tempFits(t,it){ return !!t && !!it && enchantFits(t,it); }
+function tempAvail(t,state){
+  state=state||S;
+  if(t.cls && !t.cls.includes(state.char.cls)) return {ok:false,why:`${t.cls.join(", ")} only`};
+  if((t.rl||0)>(+state.char.level||60)) return {ok:false,why:`Requires level ${t.rl}`};
+  if(t.src==="spell") return {ok:true,how:"Your class spell"};
+  return {ok:true,how:t.p?(hasProf(t.p,state)?`You make it (${t.p})`:`Buy or trade (made by ${t.p})`):t.sold?"Sold by vendors":"Buy or find it"};
+}
+function tempOn(state,slot,it){
+  if(!TEMP_SLOTS.has(slot)) return null;
+  const id=state.temps&&state.temps[slot]; if(id==null) return null;
+  const t=TEMP_BY_ID[id]; if(!t||!tempFits(t,it)||!tempAvail(t,state).ok) return null;
+  return t;
+}
+function tempText(t){ return t.n; }
+/* One enchantment per item. Enchants, armor kits, spikes, scopes, arcanums and shoulder enchants all share
+   that one spot, so applying any of them replaces whatever was there. */
+function applyEnchant(slot,id){
+  S.enchants=S.enchants||{};
+  const it=itemFor(S,slot), old=enchantOn(S,slot,it), en=ENCH_BY_ID[id];
+  if(old&&old.id===id) return;
+  S.enchants[slot]=id; S.example=false; persist();
+  toast(old?`Replaced ${enchantText(old)} with ${enchantText(en)} on ${slot}`:`${enchantText(en)} applied to ${slot}`);
+}
+function profNameLine(state){ const p=profState(state); return [p.p1,p.p2].filter(Boolean).join(" · ")||"No professions"; }
+
+/* ---------- professions bar on the character plate ---------- */
+function profBarHTML(){
+  const p=profState(); const prim=CRAFT.primary||[];
+  const sel=(id,val,other)=>`<select id="${id}" aria-label="Primary profession"><option value="">None</option>${prim.map(n=>`<option ${val===n?"selected":""} ${other===n?"disabled":""}>${n}</option>`).join("")}</select>`;
+  const specs=[p.p1,p.p2].filter(n=>CRAFT.specs&&CRAFT.specs[n]);
+  return `<div class="profbar">
+    <div class="pf-group"><span class="lbl">Primary professions</span>
+      <div class="pf-pick">${p.p1?`<img src="${IICON(PROF_ICON[p.p1])}" alt="">`:""}${sel("pf1",p.p1,p.p2)}</div>
+      <div class="pf-pick">${p.p2?`<img src="${IICON(PROF_ICON[p.p2])}" alt="">`:""}${sel("pf2",p.p2,p.p1)}</div></div>
+    ${specs.map(n=>`<div class="pf-group"><span class="lbl">${esc(n)} specialization</span><select data-spec="${esc(n)}" aria-label="${esc(n)} specialization"><option value="">None</option>${CRAFT.specs[n].map(sp=>`<option ${p.spec[n]===sp?"selected":""}>${esc(sp)}</option>`).join("")}</select></div>`).join("")}
+    <div class="pf-group"><span class="lbl">Secondary</span><div class="pf-sec">${(CRAFT.secondary||[]).map(n=>`<label class="pf-chip ${p.sec[n]?"on":""}"><input type="checkbox" data-sec="${esc(n)}" ${p.sec[n]?"checked":""}><img src="${IICON(PROF_ICON[n])}" alt="">${esc(n)}</label>`).join("")}</div></div>
+  </div>`;
+}
+function wireProfBar(root){
+  const p=profState();
+  const after=()=>{ S.example=false; cleanupUnavailable(); commit(); };
+  const a=root.querySelector("#pf1"), b=root.querySelector("#pf2");
+  if(a) a.onchange=e=>{ p.p1=e.target.value; if(p.p1===p.p2) p.p2=""; after(); };
+  if(b) b.onchange=e=>{ p.p2=e.target.value; if(p.p1===p.p2) p.p1=""; after(); };
+  root.querySelectorAll("[data-spec]").forEach(x=>x.onchange=()=>{ p.spec[x.dataset.spec]=x.value; after(); });
+  root.querySelectorAll("[data-sec]").forEach(x=>x.onchange=()=>{ p.sec[x.dataset.sec]=x.checked; after(); });
+}
+/* drop gear, enchants or consumables the character can no longer obtain */
+function cleanupUnavailable(){
+  const removed=[];
+  for(const sl of SLOTS){
+    const it=itemFor(S,sl);
+    if(it && (!itemAvail(it).ok||!canUse(it,S))){ removed.push(it.n); S.gear[sl]={}; }
+    const eid=S.enchants&&S.enchants[sl];
+    if(eid){ const en=ENCH_BY_ID[eid]; if(!en||!enchantSources(en).length){ removed.push(en?enchantText(en):"enchant"); delete S.enchants[sl]; } }
+    const tid=S.temps&&S.temps[sl];
+    if(tid!=null){ const t=TEMP_BY_ID[tid]; if(!t||(t.cls&&!t.cls.includes(S.char.cls))){ removed.push(t?t.n:"temporary enhancement"); delete S.temps[sl]; } }
+  }
+  S.cons=(S.cons||[]).filter(id=>{ const c=CONS_BY_ID[id]; const ok=c&&consAvail(c).ok; if(!ok&&c) removed.push(c.n); return ok; });
+  if(removed.length) toast(`Removed ${removed.length} item${removed.length>1?"s":""} you can no longer get or use`);
+}
+function consAvail(c,state){
+  if(c.bop && !hasProf(c.p,state)) return {ok:false,why:`Soulbound: only ${c.p} can make it`};
+  return {ok:true,how:hasProf(c.p,state)?`You make it (${c.p})`:`Buy or trade (${c.p})`};
+}
+
+/* ---------- temporary weapon enhancement chooser (sits under the enchant list) ---------- */
+function renderTempPicker(el,slot){
+  if(!el) return; const it=itemFor(S,slot);
+  if(!it||!TEMP_SLOTS.has(slot)){ el.innerHTML=""; return; }
+  const fits=(CRAFT.temps||[]).filter(t=>tempFits(t,it)&&(!t.cls||t.cls.includes(S.char.cls)));
+  if(!fits.length){ el.innerHTML=""; return; }
+  const role=roleOf(S), f=METRIC[role], base=f(compute(S)); S.temps=S.temps||{}; const cur=S.temps[slot];
+  const rows=fits.map(t=>{ const av=tempAvail(t); S.temps[slot]=t.id; const d=av.ok?f(compute(S))-base:0; return {t,av,d}; });
+  if(cur!=null) S.temps[slot]=cur; else delete S.temps[slot];
+  rows.sort((a,b)=>(b.av.ok-a.av.ok)||b.d-a.d||(a.t.proc-b.t.proc)||(b.t.rl-a.t.rl));
+  const shown=rows.filter(r=>r.av.ok||ui.showLocked).slice(0,60);
+  const curT=tempOn(S,slot,it); const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
+  el.innerHTML=`<div class="eyebrow" style="margin:12px 0 4px">Temporary enhancement</div>
+    <div class="note" style="margin-bottom:6px">Stones, oils, poisons, imbues and coatings go on top of the enchant instead of replacing it. One at a time per weapon: a new one replaces the old one. Ones that only work as on-hit effects are listed, but the stat sheet can't count them.${curT?` Now: <span class="ench temp">${esc(tempText(curT))}</span> <button class="btn small ghost" id="tpRemove">Remove</button>`:""}</div>
+    <div class="pk-list">${shown.map(({t,av,d})=>`<button class="pk-row en-row ${curT&&curT.id===t.id?"on":""} ${av.ok?"":"locked"}" data-tp="${t.id}" ${av.ok?"":"disabled"}>
+      <span class="en-mark" aria-hidden="true"></span>
+      <span class="pk-nm"><b class="ench temp">${esc(t.n)}</b><small>${esc(TEMP_KIND[t.kind]||"")}${t.rl>1?` · Req ${t.rl}`:""} · ${esc(av.ok?av.how:av.why)}${t.proc?" · on-hit effect, not counted":""}${curT&&curT.id!==t.id&&av.ok?` · <span class="muted">replaces ${esc(tempText(curT))}</span>`:""}</small>${t.desc?`<small class="pk-st">${esc(t.desc)}</small>`:""}</span>
+      <span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(role==="tank"?2:1)}<small>${unit}</small></span></button>`).join("")||`<div class="empty">Nothing you can use right now.</div>`}</div>`;
+  const rm=el.querySelector("#tpRemove"); if(rm) rm.onclick=()=>{ delete S.temps[slot]; S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); };
+  el.querySelectorAll("[data-tp]").forEach(b=>b.onclick=()=>{ const t=TEMP_BY_ID[b.dataset.tp]; const old=curT; S.temps=S.temps||{}; S.temps[slot]=t.id; S.example=false; persist();
+    toast(old&&old.id!==t.id?`Replaced ${tempText(old)} with ${tempText(t)} on ${slot}`:`${tempText(t)} applied to ${slot}`); renderPlate(); renderGearDoll(); renderPicker(); });
+}
+/* ---------- enchant chooser inside the gear picker ---------- */
+function renderEnchantPicker(el,slot){
+  const it=itemFor(S,slot);
+  if(!it){ el.innerHTML=`<div class="empty">Equip an item in this slot first, then pick an enchant for it.</div>`; return; }
+  const fits=CRAFT.enchants.filter(en=>enchantFits(en,it));
+  if(!fits.length){ el.innerHTML=`<div class="empty">Nothing in Forever can enchant ${esc(it.n)}.</div>`; return; }
+  const role=roleOf(S), f=METRIC[role], base=f(compute(S));
+  S.enchants=S.enchants||{}; const cur=S.enchants[slot];
+  const q=(ui.eq||"").toLowerCase();
+  const rows=fits.filter(en=>!q||(en.n+" "+(en.src||[]).map(s=>s.n).join(" ")).toLowerCase().includes(q)).map(en=>{
+    const src=enchantSources(en); S.enchants[slot]=en.id; const d=f(compute(S))-base; return {en,src,d};
+  });
+  if(cur) S.enchants[slot]=cur; else delete S.enchants[slot];
+  rows.sort((a,b)=>(b.src.length>0)-(a.src.length>0)||b.d-a.d||a.en.n.localeCompare(b.en.n));
+  const shown=rows.filter(r=>r.src.length||ui.showLocked);
+  const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
+  const curEn=enchantOn(S,slot,it);
+  el.innerHTML=`<div class="eyebrow" style="margin-bottom:4px">Permanent enchant</div><div class="note" style="margin-bottom:6px">One enchantment per item. Applying another enchant, armor kit, spike or scope replaces the one that's there, it never stacks.${curEn?` Now: <span class="ench">${esc(enchantText(curEn))}</span> <button class="btn small ghost" id="enRemove">Remove enchant</button>`:""}</div>
+    <div class="pk-tools"><input type="search" id="enSearch" placeholder="Search enchants for ${esc(it.n)}…" value="${esc(ui.eq||"")}" autocomplete="off">
+      <label class="switch"><input type="checkbox" id="enLocked" ${ui.showLocked?"checked":""}> Show ones I can't get</label></div>
+    <div class="pk-list">${shown.map(({en,src,d})=>`<button class="pk-row en-row ${en.id===cur?"on":""} ${src.length?"":"locked"}" data-en="${en.id}" ${src.length?"":"disabled"}>
+      <span class="en-mark" aria-hidden="true"></span>
+      <span class="pk-nm"><b class="ench">${esc(enchantText(en))}</b><small>${esc(src.length?src.join(" · "):(en.needs?`Requires ${en.needs.n}`:"Needs a profession you don't have"))}${curEn&&curEn.id!==en.id&&src.length?` · <span class="muted">replaces ${esc(enchantText(curEn))}</span>`:""}</small>${en.desc?`<small class="pk-st">${esc(en.desc)}</small>`:""}</span>
+      <span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(role==="tank"?2:1)}<small>${unit}</small></span></button>`).join("")||`<div class="empty">No enchants match.</div>`}</div>
+    <div id="pkTemp"></div>`;
+  el.querySelector("#enSearch").oninput=e=>{ ui.eq=e.target.value; renderEnchantPicker(el,slot); const i=el.querySelector("#enSearch"); i.focus(); i.setSelectionRange(i.value.length,i.value.length); };
+  el.querySelector("#enLocked").onchange=e=>{ ui.showLocked=e.target.checked; renderEnchantPicker(el,slot); };
+  el.querySelectorAll("[data-en]").forEach(b=>b.onclick=()=>{ applyEnchant(slot,+b.dataset.en); renderPlate(); renderGearDoll(); renderPicker(); });
+  renderTempPicker(el.querySelector("#pkTemp"),slot);
+  const rm=el.querySelector("#enRemove"); if(rm) rm.onclick=()=>{ delete S.enchants[slot]; S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); };
+}
+
+/* ---------- consumables (flask, food, elixirs, potions) ---------- */
+function renderConsumables(el){
+  const role=roleOf(S), f=METRIC[role];
+  S.cons=S.cons||[];
+  const base=f(compute(S));
+  const delta=c=>{ const had=S.cons.includes(c.id); const keep=S.cons; S.cons=had?keep.filter(x=>x!==c.id):[...keep.filter(x=>!(c.kind!=="elixir"&&c.kind!=="potion"&&(CONS_BY_ID[x]||{}).kind===c.kind)),c.id]; const d=f(compute(S))-base; S.cons=keep; return had?-d:d; };
+  const groups=[["flask","Flask","One at a time"],["elixir","Elixirs","Stack different elixirs"],["food","Food","One Well Fed buff"],["potion","Potions","Short combat buffs"]];
+  const lvl=+S.char.level||60;
+  el.innerHTML=groups.map(([k,label,hint])=>{
+    const list=CRAFT.consumables.filter(c=>c.kind===k&&c.rl<=lvl);
+    const avail=list.filter(c=>consAvail(c).ok).map(c=>({c,d:delta(c)})).sort((a,b)=>b.d-a.d||b.c.rl-a.c.rl);
+    const on=avail.filter(x=>S.cons.includes(x.c.id));
+    return `<div class="cons-g"><div class="cons-h"><span class="lbl">${label}</span><small>${hint}</small></div>
+      <div class="cons-on">${on.length?on.map(x=>`<span class="cons-chip" data-ctip="${x.c.id}"><img src="${IICON(x.c.ic)}" alt=""><span><b>${esc(x.c.n)}</b><small>${esc(statLine({st:x.c.st},4))}</small></span><button class="btn small ghost" data-coff="${x.c.id}" aria-label="Remove ${esc(x.c.n)}">×</button></span>`).join(""):`<span class="muted">None</span>`}</div>
+      <select data-cadd="${k}" aria-label="Add ${label}"><option value="">${on.length&&k!=="elixir"&&k!=="potion"?"Swap for…":"Add…"}</option>${avail.filter(x=>!S.cons.includes(x.c.id)).slice(0,60).map(x=>`<option value="${x.c.id}">${esc(x.c.n)} · ${esc(statLine({st:x.c.st},3))}${x.d>0.05?` · +${x.d.toFixed(1)}`:""}</option>`).join("")}</select></div>`;
+  }).join("");
+  el.querySelectorAll("[data-ctip]").forEach(x=>{ const c=CONS_BY_ID[x.dataset.ctip]; x.onmouseenter=ev=>showConsTip(c,ev); x.onmousemove=moveTip; x.onmouseleave=hideTip; });
+  el.querySelectorAll("[data-coff]").forEach(b=>b.onclick=()=>{ S.cons=S.cons.filter(x=>x!==+b.dataset.coff); persist(); renderPlate(); renderConsumables(el); });
+  el.querySelectorAll("[data-cadd]").forEach(sel=>sel.onchange=()=>{ const id=+sel.value; if(!id) return; const c=CONS_BY_ID[id];
+    S.cons=S.cons.filter(x=>!(c.kind!=="elixir"&&c.kind!=="potion"&&(CONS_BY_ID[x]||{}).kind===c.kind)); S.cons.push(id); persist(); renderPlate(); renderConsumables(el); });
+}
+
+/* ---------- Professions & Crafting tab ---------- */
+function slotsForItem(it){ return SLOTS.filter(sl=>(SLOT_INV[sl]||[]).includes(it.inv)); }
+function bestGainFor(prof){
+  // value of adding `prof`: best new item per slot + best new enchant per slot that only this profession unlocks
+  const role=roleOf(S), f=METRIC[role];
+  const without=S, withP=JSON.parse(JSON.stringify(S)); const pp=profState(withP);
+  if(!pp.p1) pp.p1=prof; else if(!pp.p2&&pp.p1!==prof) pp.p2=prof; else pp.p2=prof;
+  const base=f(compute(S)); const picks=[];
+  const lvl=+S.char.level||60;
+  for(const sl of SLOTS){
+    if(sl==="Shirt"||sl==="Tabard") continue;
+    let best=null;
+    for(const it of slotCandidates(sl,S)){
+      if(it.lv>lvl||!canUse(it,S)) continue;
+      if(!(it.cr&&it.cr.p===prof)&&!(it.req||[]).some(r=>r.n===prof||specProf(r.n)===prof)) continue;
+      if(!itemAvail(it,withP).ok||itemAvail(it,without).ok) continue;
+      const keep=S.gear[sl]; S.gear[sl]={id:it.id}; const d=f(compute(S))-base; S.gear[sl]=keep;
+      if(d>0.05&&(!best||d>best.d)) best={d,n:it.n,sl,id:it.id,kind:"item"};
+    }
+    const cur=itemFor(S,sl);
+    if(cur) for(const en of CRAFT.enchants){
+      if(!enchantFits(en,cur)) continue;
+      if(!enchantSources(en,withP).length||enchantSources(en,without).length) continue;
+      const keep=(S.enchants||{})[sl]; S.enchants=S.enchants||{}; S.enchants[sl]=en.id; const d=f(compute(S))-base; if(keep) S.enchants[sl]=keep; else delete S.enchants[sl];
+      if(d>0.05&&(!best||d>best.d)) best={d,n:enchantText(en),sl,id:en.id,kind:"enchant"};
+    }
+    if(best) picks.push(best);
+  }
+  picks.sort((a,b)=>b.d-a.d);
+  const exclusive=ITEMS.filter(it=>it.cr&&it.cr.p===prof&&canUse(it,S)&&slotsForItem(it).length&&itemAvail(it,withP).ok&&!itemAvail(it,without).ok).length;
+  return {prof,total:picks.reduce((a,p)=>a+p.d,0),picks,exclusive};
+}
+function renderProfTab(v){
+  if(!S.char.cls){ v.innerHTML=`<div class="empty">Create your character first.</div>`; return; }
+  const role=roleOf(S); const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
+  const pf=ui.pf||"mine", cat=ui.pcat||"gear";
+  v.innerHTML=`<section class="frame card" id="planBox"></section>
+    <section class="frame card">
+      <div class="pt-tools">
+        <div class="seg" role="tablist">${[["gear","Crafted gear"],["enchant","Enchants & kits"],["cons","Consumables"]].map(([k,l])=>`<button role="tab" aria-selected="${cat===k}" data-cat="${k}">${l}</button>`).join("")}</div>
+        <select id="ptProf" aria-label="Profession"><option value="mine" ${pf==="mine"?"selected":""}>My professions</option><option value="all" ${pf==="all"?"selected":""}>All professions</option>${[...(CRAFT.primary||[]),...(CRAFT.secondary||[])].map(n=>`<option ${pf===n?"selected":""}>${n}</option>`).join("")}</select>
+        <input type="search" id="ptSearch" placeholder="Search…" value="${esc(ui.pq||"")}" autocomplete="off">
+        <label class="switch" title="Untick to see every craft, including soulbound ones you can't make"><input type="checkbox" id="ptAvail" ${ui.pavail!==false?"checked":""}> Only items I can obtain</label>
+        <label class="switch" title="Untick to see crafts above your level too"><input type="checkbox" id="ptLevel" ${ui.plvl!==false?"checked":""}> Usable at level ${S.char.level} and below</label>
+      </div>
+      <div class="pt-list" id="ptList"></div>
+    </section>`;
+  v.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ ui.pcat=b.dataset.cat; renderProfTab(v); });
+  v.querySelector("#ptProf").onchange=e=>{ ui.pf=e.target.value; renderProfList(); };
+  v.querySelector("#ptSearch").oninput=e=>{ ui.pq=e.target.value; renderProfList(); };
+  v.querySelector("#ptAvail").onchange=e=>{ ui.pavail=e.target.checked; renderProfList(); };
+  v.querySelector("#ptLevel").onchange=e=>{ ui.plvl=e.target.checked; renderProfList(); };
+  renderProfList(); renderPlanner(v.querySelector("#planBox"));
+}
+function renderProfList(){
+  const el=qs("#ptList"); if(!el) return;
+  const pf=ui.pf||"mine", cat=ui.pcat||"gear", q=(ui.pq||"").toLowerCase(), onlyAvail=ui.pavail!==false;
+  const lvl=+S.char.level||60, lvlOk=r=>ui.plvl===false||r<=lvl;
+  const profOk=p=>pf==="all"||(pf==="mine"?hasProf(p):p===pf);
+  const role=roleOf(S), f=METRIC[role], base=f(compute(S));
+  const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
+  let rows=[];
+  if(cat==="gear"){
+    rows=ITEMS.filter(it=>it.cr&&profOk(it.cr.p)&&lvlOk(it.lv)&&(!q||(it.n+" "+it.t+" "+statLine(it,20)).toLowerCase().includes(q)));
+    rows=rows.map(it=>{ const av=itemAvail(it); const sl=slotsForItem(it).find(x=>x)||null; let d=null;
+      if(sl&&canUse(it,S)){ const keep=S.gear[sl]; S.gear[sl]={id:it.id}; d=f(compute(S))-base; S.gear[sl]=keep; }
+      return {it,av,sl,d}; }).filter(r=>!onlyAvail||r.av.ok);
+    rows.sort((a,b)=>(b.d??-1e9)-(a.d??-1e9)||b.it.il-a.it.il);
+    if(pf==="mine"&&!profState().p1&&!profState().p2) { el.innerHTML=`<div class="empty">Pick your professions on the character plate, or choose a profession above to browse.</div>`; return; }
+    el.innerHTML=rows.slice(0,200).map(({it,av,sl,d})=>`<div class="pt-row ${av.ok?"":"locked"}">
+      <img src="${IICON(it.ic)}" alt="" style="border-color:${QCOL[it.q]}" data-tip="${it.id}">
+      <span class="pk-nm"><b style="color:${QCOL[it.q]}" data-tip="${it.id}">${esc(it.n)}</b><small>${esc(it.cr.p)} · ${BIND_SHORT[it.b]||(it.bop?"Bind on Pickup":"Bind on Equip")} · ${it.il} ilvl${it.rl>1?` · Req ${reqText(it)}`:""} · ${esc(it.t||"")}</small><small class="${av.ok&&it.lv<=lvl?"pk-st":"bad"}">${esc(!av.ok?av.why:it.lv>lvl?`Requires level ${reqText(it)}`:(av.how||statLine(it)))}</small></span>
+      <span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d===null?"":`${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(1)}<small>${unit}</small>`}</span>
+      ${av.ok&&sl&&canUse(it,S)&&it.lv<=lvl?`<button class="btn small" data-equip="${it.id}" data-slot="${esc(sl)}">Equip</button>`:`<span></span>`}</div>`).join("")+(rows.length>200?`<div class="note">Showing 200 of ${rows.length}. Search to narrow it down.</div>`:"")||`<div class="empty">No crafted gear matches.</div>`;
+  } else if(cat==="enchant"){
+    rows=CRAFT.enchants.filter(en=>{ const ps=new Set((en.src||[]).map(s=>s.k==="enchanter"?"Enchanting":s.p).filter(Boolean)); return (pf==="all"||[...ps].some(profOk)||(pf==="mine"&&false)) && (!q||(en.n+" "+(en.src||[]).map(s=>s.n).join(" ")).toLowerCase().includes(q)); });
+    rows=rows.map(en=>{ const src=enchantSources(en); let best=null;
+      for(const sl of SLOTS){ const it=itemFor(S,sl); if(!it||!enchantFits(en,it)) continue; const keep=(S.enchants||{})[sl]; S.enchants=S.enchants||{}; S.enchants[sl]=en.id; const d=f(compute(S))-base; if(keep) S.enchants[sl]=keep; else delete S.enchants[sl]; if(!best||d>best.d) best={sl,d}; }
+      return {en,src,best}; }).filter(r=>!onlyAvail||r.src.length);
+    rows.sort((a,b)=>((b.best||{d:-1e9}).d)-((a.best||{d:-1e9}).d)||a.en.n.localeCompare(b.en.n));
+    el.innerHTML=rows.slice(0,250).map(({en,src,best})=>`<div class="pt-row ${src.length?"":"locked"}"><span class="en-mark big" aria-hidden="true"></span>
+      <span class="pk-nm"><b class="ench">${esc(enchantText(en))}</b><small>${esc((en.src||[]).map(s=>s.k==="enchanter"?s.n:`${s.n}${s.p?` (${s.p})`:""}`).filter((x,i,a)=>a.indexOf(x)===i).slice(0,2).join(" · "))}</small><small class="${src.length?"pk-st":"bad"}">${esc(src.length?src.join(" · "):(en.needs?`Requires ${en.needs.n}`:"Needs a profession you don't have"))}${en.desc?` · ${esc(en.desc)}`:""}</small></span>
+      <span class="pk-d ${best&&best.d>0.05?"up":""}">${best?`${best.d>0.05?"+":""}${Math.abs(best.d)<0.05?"±0":best.d.toFixed(1)}<small>${unit} · ${esc(best.sl)}</small>`:`<small>No matching gear equipped</small>`}</span>
+      ${src.length&&best?`<button class="btn small" data-ench="${en.id}" data-slot="${esc(best.sl)}">Apply</button>`:`<span></span>`}</div>`).join("")||`<div class="empty">No enchants match.</div>`;
+  } else {
+    rows=CRAFT.consumables.filter(c=>profOk(c.p)&&lvlOk(c.rl)&&(!q||(c.n+" "+c.use).toLowerCase().includes(q))).map(c=>({c,av:consAvail(c)})).filter(r=>!onlyAvail||r.av.ok);
+    el.innerHTML=rows.map(({c,av})=>`<div class="pt-row ${av.ok?"":"locked"}"><img src="${IICON(c.ic)}" alt="" style="border-color:${QCOL[c.q]}" data-ctip="${c.id}">
+      <span class="pk-nm"><b style="color:${QCOL[c.q]}">${esc(c.n)}</b><small>${esc(c.p)} · ${esc(c.kind)} · ${c.bop?"Soulbound":"Tradeable"} · Req level ${c.rl}</small><small class="pk-st">${esc(c.use)}</small></span>
+      <span class="pk-d">${esc(statLine({st:c.st},3))}</span>
+      ${av.ok&&c.rl<=lvl?`<button class="btn small" data-cons="${c.id}">${(S.cons||[]).includes(c.id)?"Using":"Use"}</button>`:`<span class="bad">${esc(av.why)}</span>`}</div>`).join("")||`<div class="empty">No consumables match.</div>`;
+  }
+  el.querySelectorAll("[data-equip]").forEach(b=>b.onclick=()=>{ ui.slot=b.dataset.slot; equipQuiet(b.dataset.slot,+b.dataset.equip); toast(`Equipped in ${b.dataset.slot}`); renderProfList(); });
+  el.querySelectorAll("[data-ench]").forEach(b=>b.onclick=()=>{ applyEnchant(b.dataset.slot,+b.dataset.ench); renderPlate(); renderProfList(); });
+  el.querySelectorAll("[data-cons]").forEach(b=>b.onclick=()=>{ const id=+b.dataset.cons, c=CONS_BY_ID[id]; S.cons=(S.cons||[]).filter(x=>x!==id&&!(c.kind!=="elixir"&&c.kind!=="potion"&&(CONS_BY_ID[x]||{}).kind===c.kind)); S.cons.push(id); persist(); renderPlate(); toast(`Using ${c.n}`); renderProfList(); });
+  el.querySelectorAll("[data-tip]").forEach(x=>{ const it=ITEM_BY_ID[x.dataset.tip]; x.onmouseenter=ev=>showItemTip(it,ev); x.onmousemove=moveTip; x.onmouseleave=hideTip; });
+  el.querySelectorAll("[data-ctip]").forEach(x=>{ const c=CONS_BY_ID[x.dataset.ctip]; x.onmouseenter=ev=>showConsTip(c,ev); x.onmousemove=moveTip; x.onmouseleave=hideTip; });
+}
+function equipQuiet(slot,id){
+  const it=ITEM_BY_ID[id]; if(!it) return;
+  S.gear[slot]={id};
+  if(slot==="Main Hand" && it.inv===17) S.gear["Off Hand"]={};
+  if(slot==="Off Hand"){ const mh=itemFor(S,"Main Hand"); if(mh&&mh.inv===17) S.gear["Main Hand"]={}; }
+  const clash=uniqueClash(it,slot,S); if(clash) S.gear[clash.slot]={};
+  S.example=false; persist(); renderPlate();
+}
+
+/* ================== Gear tab: paper doll, item picker, 3D model ================== */
+const QCOL=["#9d9d9d","#ffffff","#1eff00","#0070dd","#a335ee","#ff8000","#e6cc80"];
+const IICON=n=>"assets/items/"+n+".jpg";
+const STAT_SHORT={str:"Str",agi:"Agi",sta:"Sta",int:"Int",spi:"Spi",ap:"AP",rap:"RAP",sp:"Spell Power",heal:"Healing",spd:"Spell Dmg",crit:"% Crit",hit:"% Hit",mp5:"MP5",def:"Def",dodge:"% Dodge",parry:"% Parry",block:"% Block",bv:"Block Value"};
+const DOLL_L=["Head","Neck","Shoulder","Back","Chest","Shirt","Tabard","Wrist"], DOLL_R=["Hands","Waist","Legs","Feet","Finger 1","Finger 2","Trinket 1","Trinket 2"], DOLL_B=["Main Hand","Off Hand","Ranged / Relic"];
+const RACE_MODEL={human:1,orc:2,dwarf:3,nightelf:4,undead:5,tauren:6,gnome:7,troll:8,skyborne:4};
+
+function canUse(it,state){
+  const cls=state.char.cls;
+  if(it.cl && !it.cl.includes(cls)) return false;
+  if(it.rc && !it.rc.includes(RACE_NAME[state.char.race])) return false;
+  if(it.wpn){ if(!(WEAPON_OK[cls]||[]).includes(it.t)) return false; }
+  else if(it.t && it.t!=="Miscellaneous" && !(ARMOR_OK[cls]||[]).includes(it.t)) return false;
+  return true;
+}
+function slotCandidates(slot,state){
+  const inv=SLOT_INV[slot]||[]; const c=CLS[state.char.cls]||{};
+  return ITEMS.filter(it=>{
+    if(!inv.includes(it.inv)) return false;
+    if(slot==="Off Hand" && it.inv===13 && !c.dw) return false;
+    if(slot==="Ranged / Relic" && it.t==="Wand" && !(WEAPON_OK[state.char.cls]||[]).includes("Wand")) return false;
+    return true;
+  });
+}
+function statLine(it,max=4){
+  const st=it.st||{}; const out=[];
+  if(it.w) out.push(`${(((it.w.min+it.w.max)/2)/it.w.spd).toFixed(1)} DPS`);
+  for(const k of ["str","agi","sta","int","spi","sp","heal","spd","ap","rap","crit","hit","mp5","def","dodge","parry","block","bv"]){
+    if(st[k]) out.push(/%/.test(STAT_SHORT[k])?`${st[k]}${STAT_SHORT[k]}`:`+${st[k]} ${STAT_SHORT[k]}`);
+  }
+  return out.slice(0,max).join(" · ");
+}
+function itemTip(it,equipped){
+  const st=it.st||{}; let h=`<h4 style="color:${QCOL[it.q]}">${esc(it.n)}</h4><div class="r">Item Level ${it.il}</div>`;
+  if(equipped && (it.b===1||it.b===2||it.b===3)) h+=`<div class="n">Soulbound</div>`;
+  else if(it.b) h+=`<div class="n">${BIND_TEXT[it.b]}</div>`;
+  if(it.u) h+=`<div class="n">${it.ug?`Unique-Equipped: ${esc(it.ug)} (1)`:"Unique"}</div>`;
+  const slotName={1:"Head",2:"Neck",3:"Shoulder",4:"Shirt",5:"Chest",6:"Waist",7:"Legs",8:"Feet",9:"Wrist",10:"Hands",11:"Finger",12:"Trinket",13:"One-Hand",14:"Off Hand",15:"Ranged",16:"Back",17:"Two-Hand",19:"Tabard",20:"Chest",21:"Main Hand",22:"Off Hand",23:"Held In Off-hand",25:"Thrown",26:"Ranged",28:"Relic"}[it.inv]||"";
+  h+=`<div class="cost"><span>${slotName}</span><span>${esc(it.t&&it.t!=="Miscellaneous"?it.t.replace(/^(One|Two)-Hand /,""):"")}</span></div>`;
+  if(it.w) h+=`<div class="cost"><span>${it.w.min} - ${it.w.max}${it.w.school?" "+esc(it.w.school):""} Damage</span><span>Speed ${it.w.spd.toFixed(2)}</span></div><div class="n">(${(((it.w.min+it.w.max)/2)/it.w.spd).toFixed(1)} damage per second)</div>`;
+  if(st.armor) h+=`<div class="n">${st.armor} Armor</div>`;
+  ["str","agi","sta","int","spi"].forEach(k=>{ if(st[k]) h+=`<div class="n">+${st[k]} ${({str:"Strength",agi:"Agility",sta:"Stamina",int:"Intellect",spi:"Spirit"})[k]}</div>`; });
+  Object.keys(st).filter(k=>k.startsWith("res_")).forEach(k=>h+=`<div class="n">+${st[k]} ${k.slice(4)[0].toUpperCase()+k.slice(5)} Resistance</div>`);
+  const bad='style="color:#ff2020"';
+  if(it.rl>1) h+=`<div class="n" ${it.rl>(+S.char.level||60)?bad:""}>Requires Level ${it.rl}</div>`;
+  if(it.cl) h+=`<div class="n" ${it.cl.includes(S.char.cls)?"":bad}>Classes: ${esc(it.cl.join(", "))}</div>`;
+  if(it.rc) h+=`<div class="n" ${it.rc.includes(RACE_NAME[S.char.race])?"":bad}>Races: ${esc(it.rc.join(", "))}</div>`;
+  if(it.fx) h+=`<div class="n" ${it.fx===(S.char.faction==="Horde"?"h":"a")?"":bad}>${it.fx==="h"?"Horde":"Alliance"} only</div>`;
+  if(!canUse(it,S) && !it.cl && !it.rc) h+=`<div class="n" ${bad}>${esc(S.char.cls)}s can't use ${esc(it.t||"this")}</div>`;
+  (it.eq||[]).forEach(x=>h+=`<div class="g">Equip: ${esc(x)}</div>`);
+  (it.use||[]).forEach(x=>h+=`<div class="g">${esc(x)}</div>`);
+  if(it.set) h+=`<div class="t" style="margin-top:4px">${esc(it.set)}</div>`+(it.sb||[]).map(x=>`<div class="r">${esc(x)}</div>`).join("");
+  const av=itemAvail(it);
+  h+=it.cr?sourceLines((it.src||[]).filter(x=>!/^Crafted:/.test(x.t)),true):sourceLines(it.src);
+  if(it.cr){ h+=`<div class="cl">Crafted by ${esc(it.cr.p)}${it.cr.r!=null?` (skill ${it.cr.r})`:""} · ${it.bop?"Bind on Pickup, so only the crafter can use it":"Bind on Equip, tradeable until worn"}${it.cr.learn?` · ${esc(it.cr.learn)}`:""}</div>`;
+    if(it.cr.rg&&it.cr.rg.length) h+=`<div class="r">Reagents: ${it.cr.rg.map(([n,c,how])=>`${c}× ${esc(n)}${how?` <span class="muted">(${esc(how)})</span>`:""}`).join(", ")}</div>`; }
+  if(!av.ok) h+=`<div class="q">${esc(av.why)}</div>`; else if(av.how) h+=`<div class="h">${esc(av.how)}</div>`;
+  if(!it.ok) h+=`<div class="q">Not confirmed in Forever yet${isActive(it)?"":", so it's inactive"}</div>`;
+  const ic=itemCats(it); h+=`<div class="r muted">Gear source: ${SRC_CATS.filter(c=>ic.includes(c[0])).map(c=>c[1]).join(", ")}</div>`;
+  return h;
+}
+const SRC_TAG={s:"",f:"",c:" · unconfirmed clue",k:" · Classic data, not yet seen in Forever"};
+function sourceLines(src,quiet){
+  if(!src||!src.length) return quiet?"":`<div class="cl">Where to get it: not recorded for Forever yet</div>`;
+  return `<div class="cl">${src.slice(0,3).map(x=>`<div class="${x.l==="k"||x.l==="c"?"unconf":"srcl"}">${esc(x.t)}${SRC_TAG[x.l]||""}</div>`).join("")}</div>`;
+}
+function consTip(c){
+  let h=`<h4 style="color:${QCOL[c.q]}">${esc(c.n)}</h4><div class="g">${esc(c.use)}</div>`;
+  h+=sourceLines(c.src);
+  if(c.learn) h+=`<div class="r">${esc(c.learn)}</div>`;
+  if(c.rg&&c.rg.length) h+=`<div class="r">Reagents: ${c.rg.map(([n,k,how])=>`${k}× ${esc(n)}${how?` <span class="muted">(${esc(how)})</span>`:""}`).join(", ")}</div>`;
+  return h;
+}
+function showConsTip(c,ev){ if(!c||matchMedia("(hover: none)").matches) return; const el=qs("#tip"); el.innerHTML=consTip(c); el.hidden=false; moveTip(ev); }
+function showItemTip(it,ev,equipped){ if(!it||matchMedia("(hover: none)").matches) return; const el=qs("#tip"); el.innerHTML=itemTip(it,equipped); el.hidden=false; moveTip(ev); }
+
+function equip(slot,id){
+  const it=ITEM_BY_ID[id]; if(!it) return;
+  S.gear[slot]={id};
+  if(slot==="Main Hand" && it.inv===17) S.gear["Off Hand"]={};           // two-hander frees the off hand
+  if(slot==="Off Hand"){ const mh=itemFor(S,"Main Hand"); if(mh&&mh.inv===17) S.gear["Main Hand"]={}; }
+  const clash=uniqueClash(it,slot,S);
+  if(clash){ S.gear[clash.slot]={}; toast(`${it.n} is ${it.ug?`Unique-Equipped (${it.ug})`:"Unique"}, so ${clash.it.id===it.id?"it":clash.it.n} came off ${clash.slot}.`); }
+  S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel();
+}
+function unequip(slot){ S.gear[slot]={}; persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel(); }
+
+function renderGear(v){
+  if(!S.char.cls){ v.innerHTML=`<div class="empty">Create your character first.</div>`; return; }
+  if(!ITEMS.length){ v.innerHTML=`<div class="empty">The gear database (items.json) is missing. Run “py WoWCraft.pyw --update-items” while online.</div>`; return; }
+  if(!SLOTS.includes(ui.slot)) ui.slot="Head";
+  v.innerHTML=`<div class="armory">
+    <section class="frame doll">
+      <div class="dcol" id="dollL"></div>
+      <div class="stage" id="stageHost"></div>
+      <div class="dcol" id="dollR"></div>
+      <div class="dbot" id="dollB"></div>
+      <div class="doll-tools" id="dollTools"></div>
+    </section>
+    <section class="frame picker" id="picker"></section>
+  </div>
+  <div class="gear-extra">
+    <section class="frame card"><h3>Consumables <span class="muted" style="font-family:var(--f-body);letter-spacing:0;font-size:13px">crafted flasks, elixirs, food and potions, sorted by what helps your build most</span></h3><div class="cons" id="consBox"></div></section>
+    <details class="frame" ${S.other&&GEAR_KEYS.some(k=>+S.other[k])?"open":""}><summary>Other buffs</summary>
+      <div class="note" style="margin-bottom:10px">Stats from things WoWCraft doesn't list for you, like raid buffs and world buffs. Enchants, stones, oils, imbues, flasks and food are picked in their own lists, so don't add them here too.</div>
+      <div class="statgrid" id="otherStats">${[["str","Strength"],["agi","Agility"],["sta","Stamina"],["int","Intellect"],["spi","Spirit"],["ap","Attack Power"],["sp","Spell Power"],["heal","Healing"],["crit","Crit %"],["hit","Hit %"],["mp5","Mana / 5s"],["armor","Armor"],["def","Defense"]].map(([k,n])=>`<div class="field"><label for="o_${k}">${n}</label><input id="o_${k}" type="number" step="any" data-k="${k}" value="${(S.other||{})[k]??""}" placeholder="0"></div>`).join("")}</div></details>
+    <section class="frame card" id="calibBox"></section>
+  </div>`;
+  renderGearDoll(); renderPicker(); mountModel(); renderConsumables(qs("#consBox"));
+  const debounced=fn=>{ let h; return (...a)=>{ clearTimeout(h); h=setTimeout(()=>fn(...a),250); }; };
+  const save=debounced(()=>{ S.example=false; persist(); renderPlate(); });
+  qs("#otherStats").querySelectorAll("input").forEach(i=>i.oninput=()=>{ S.other=S.other||{}; if(i.value==="") delete S.other[i.dataset.k]; else S.other[i.dataset.k]=parseFloat(i.value); save(); });
+  renderCalib(qs("#calibBox"));
+}
+function slotBtn(slot){
+  const it=itemFor(S,slot); const legacy=!it&&S.gear[slot]&&S.gear[slot].name; const gone=!it&&S.gear[slot]&&S.gear[slot].id;
+  const label=slot.replace(" / Relic","");
+  return `<button class="gslot ${ui.slot===slot?"on":""}" data-slot="${slot}" aria-label="${slot}${it?": "+esc(it.n):", empty"}">
+    <span class="gi" style="${it?`border-color:${QCOL[it.q]}`:""}">${it?`<img src="${IICON(it.ic)}" alt="">`:`<span class="gempty">${esc(label.slice(0,2))}</span>`}</span>
+    <span class="gn"><small>${esc(label)}</small><b style="color:${it?QCOL[it.q]:"var(--faint)"}">${it?esc(it.n):legacy?esc(legacy):"Empty"}</b>${gone?`<em class="over">The item that was here is no longer in Forever's item list</em>`:""}${it&&!isActive(it)?`<em class="over">Not confirmed in Forever, not counted</em>`:it&&it.lv>(+S.char.level||60)?`<em class="over">Requires level ${reqText(it)}, not counted</em>`:""}${(()=>{ const en=it&&enchantOn(S,slot,it); return en?`<em class="ench">${esc(enchantText(en))}</em>`:""; })()}${(()=>{ const t=it&&tempOn(S,slot,it); return t?`<em class="ench temp">+ ${esc(tempText(t))} (temporary)</em>`:""; })()}</span></button>`;
+}
+function renderGearDoll(){
+  const L=qs("#dollL"), R=qs("#dollR"), Bt=qs("#dollB"); if(!L) return;
+  const lvl=+S.char.level||60, over=SLOTS.filter(sl=>{ const it=itemFor(S,sl); return it&&it.lv>lvl; });
+  const unconf=SLOTS.filter(sl=>{ const it=itemFor(S,sl); return it&&!isActive(it); });
+  const T=qs("#dollTools");
+  if(T){ T.innerHTML=`${unconf.length?`<span class="over">${unconf.length} item${unconf.length>1?"s aren't":" isn't"} confirmed in Forever yet and ${unconf.length>1?"aren't":"isn't"} counted.</span><button class="btn small ghost" id="dropUnconf">Remove unconfirmed gear</button>`:""}${over.length?`<span class="over">${over.length} item${over.length>1?"s need":" needs"} a higher level than ${lvl} and ${over.length>1?"aren't":"isn't"} counted.</span><button class="btn small ghost" id="dropOver">Remove gear above level ${lvl}</button>`:""}
+      <button class="btn small" id="bestGear" title="Equips the best items and enchants you can get at your level for ${esc(ROLE_LABEL[roleOf(S)])}, only from the gear sources ticked in the item list">Fill best gear for level ${lvl}</button>`;
+    const du=T.querySelector("#dropUnconf"); if(du) du.onclick=()=>{ unconf.forEach(sl=>S.gear[sl]={}); persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel(); };
+    const d=T.querySelector("#dropOver"); if(d) d.onclick=()=>{ over.forEach(sl=>S.gear[sl]={}); S.cons=(S.cons||[]).filter(id=>(CONS_BY_ID[id]||{}).rl<=lvl); persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel(); renderConsumables(qs("#consBox")); };
+    T.querySelector("#bestGear").onclick=()=>{ const r=roleOf(S); AUTO_SRC=srcCats(); try{ autoEquip(r); } finally { AUTO_SRC=null; } autoEnchant(r); S.example=false; persist(); renderPlate(); renderGearDoll(); renderPicker(); updateModel(); const n=SRC_CATS.filter(c=>srcCats().includes(c[0])).map(c=>c[1].toLowerCase()); toast(`Equipped the best gear you can get at level ${lvl}${n.length<SRC_CATS.length?` from ${n.join(", ")}`:""}`); };
+  }
+  L.innerHTML=DOLL_L.map(slotBtn).join(""); R.innerHTML=DOLL_R.map(slotBtn).join(""); Bt.innerHTML=DOLL_B.map(slotBtn).join("");
+  document.querySelectorAll(".gslot").forEach(b=>{
+    const slot=b.dataset.slot;
+    b.onclick=()=>{ ui.slot=slot; ui.q=""; renderGearDoll(); renderPicker(true); };
+    b.onmouseenter=ev=>{ const it=itemFor(S,slot); if(!it) return; showItemTip(it,ev,true); const en=enchantOn(S,slot,it); if(en){ qs("#tip").insertAdjacentHTML("beforeend",`<div class="ench" style="margin-top:4px">Enchanted: ${esc(enchantText(en))}</div>`); }
+      const tp=tempOn(S,slot,it); if(tp){ qs("#tip").insertAdjacentHTML("beforeend",`<div class="ench temp">Temporary: ${esc(tempText(tp))}${tp.desc?` <span class="muted">(${esc(tp.desc)})</span>`:""}</div>`); } }; b.onmousemove=moveTip; b.onmouseleave=hideTip;
+  });
+}
+function srcChips(){
+  const on=srcCats();
+  return `<span class="muted" style="font-size:12px">Gear from:</span>`+SRC_CATS.map(([k,n,d])=>`<button type="button" class="chip ${on.includes(k)?"on":""}" data-src="${k}" aria-pressed="${on.includes(k)}" title="${esc(d)}">${esc(n)}</button>`).join("");
+}
+function bindSrcChips(root,after){
+  root.querySelectorAll("[data-src]").forEach(b=>b.onclick=()=>{
+    let on=srcCats(); const k=b.dataset.src;
+    on=on.includes(k)?on.replace(k,""):on+k;
+    if(!on){ toast("Keep at least one gear source ticked"); return; }
+    S.settings=S.settings||{}; S.settings.srcCats=on; persist();
+    root.querySelectorAll("[data-src]").forEach(x=>{ const v=on.includes(x.dataset.src); x.classList.toggle("on",v); x.setAttribute("aria-pressed",v); });
+    after();
+  });
+}
+function renderPicker(focus){
+  const el=qs("#picker"); if(!el) return;
+  const slot=ui.slot, cur=itemFor(S,slot);
+  const mhIt=itemFor(S,"Main Hand"); const blocked=slot==="Off Hand"&&mhIt&&mhIt.inv===17;
+  el.innerHTML=`<div class="pk-head"><div><span class="eyebrow">${esc(slot)}</span>
+      ${cur?`<div class="pk-cur"><img src="${IICON(cur.ic)}" alt=""><div><b style="color:${QCOL[cur.q]}">${esc(cur.n)}</b><small>${cur.il} ilvl · ${esc(statLine(cur,6))||"No stats"}</small></div></div>`:`<div class="muted">Nothing equipped${blocked?" (your two-handed weapon uses this slot)":""}.</div>`}</div>
+      ${cur?`<button class="btn small ghost" id="unequip">Remove</button>`:""}</div>
+    <div class="seg" role="tablist" aria-label="Choose"><button role="tab" data-pm="items" aria-selected="${(ui.pm||"items")==="items"}">Items</button><button role="tab" data-pm="ench" aria-selected="${ui.pm==="ench"}" ${cur?"":"disabled"}>Enchant${(()=>{ const en=cur&&enchantOn(S,slot,cur); return en?`: <span class="ench">${esc(enchantText(en))}</span>`:""; })()}</button></div>
+    <div id="pkEnch" ${ui.pm==="ench"&&cur?"":"hidden"}></div>
+    <div id="pkItems" ${ui.pm==="ench"&&cur?"hidden":""}>
+    <div class="pk-tools">
+      <input type="search" id="pkSearch" placeholder="Search ${esc(slot.replace(" / Relic","").replace(/ \d/,"").toLowerCase())} items, stats or sets…" value="${esc(ui.q||"")}" autocomplete="off">
+      <select id="pkSort" aria-label="Sort"><option value="best" ${ui.sort==="best"?"selected":""}>Best for my build</option><option value="ilvl" ${ui.sort==="ilvl"?"selected":""}>Item level</option><option value="name" ${ui.sort==="name"?"selected":""}>Name</option><option value="rl" ${ui.sort==="rl"?"selected":""}>Required level</option></select>
+    </div>
+    <div class="pk-filters">
+      <label class="switch"><input type="checkbox" id="pkUsable" ${ui.usable!==false?"checked":""}> Usable by ${esc(S.char.cls)}</label>
+      <label class="switch" title="Untick to see items above your level too"><input type="checkbox" id="pkLevel" ${ui.lvlok!==false?"checked":""}> Usable at level ${S.char.level} and below</label>
+      <label class="switch" title="Untick to also see soulbound crafts and profession-only items you can't get"><input type="checkbox" id="pkAvail" ${ui.pkAvail!==false?"checked":""}> Only items I can obtain</label>
+      <span class="src-chips" role="group" aria-label="Gear from">${srcChips()}</span>
+      ${showUnconfirmed()?`<span class="note" style="flex-basis:100%">Showing gear not yet confirmed in Forever too (change on the Updates tab).</span>`:`<span class="note" style="flex-basis:100%">Only gear confirmed in Forever is listed. Unconfirmed gear can be shown from the Updates tab.</span>`}
+      <select id="pkQ" aria-label="Minimum quality"><option value="1">Any quality</option><option value="2" ${ui.minq==2?"selected":""}>Uncommon+</option><option value="3" ${ui.minq==3?"selected":""}>Rare+</option><option value="4" ${ui.minq==4?"selected":""}>Epic+</option></select>
+    </div>
+    <div class="pk-list" id="pkList" role="listbox" aria-label="${esc(slot)} items"></div></div>`;
+  el.querySelectorAll("[data-pm]").forEach(b=>b.onclick=()=>{ ui.pm=b.dataset.pm; renderPicker(); });
+  if(ui.pm==="ench"&&cur){ renderEnchantPicker(qs("#pkEnch"),slot); }
+  qs("#pkSearch").oninput=e=>{ ui.q=e.target.value; renderPickerList(); };
+  qs("#pkSort").onchange=e=>{ ui.sort=e.target.value; renderPickerList(); };
+  qs("#pkUsable").onchange=e=>{ ui.usable=e.target.checked; renderPickerList(); };
+  qs("#pkLevel").onchange=e=>{ ui.lvlok=e.target.checked; renderPickerList(); };
+  qs("#pkQ").onchange=e=>{ ui.minq=+e.target.value; renderPickerList(); };
+  qs("#pkAvail").onchange=e=>{ ui.pkAvail=e.target.checked; renderPickerList(); };
+  bindSrcChips(qs("#picker"),()=>renderPickerList());
+  if(qs("#unequip")) qs("#unequip").onclick=()=>unequip(slot);
+  renderPickerList();
+  if(focus) qs("#pkSearch").focus({preventScroll:true});
+}
+function renderPickerList(){
+  const el=qs("#pkList"); if(!el) return; const slot=ui.slot;
+  const q=(ui.q||"").trim().toLowerCase(); const terms=q.split(/\s+/).filter(Boolean);
+  const lvl=+S.char.level||60, minq=ui.minq||1;
+  let list=slotCandidates(slot,S).filter(it=>it.q>=minq && (ui.usable===false||canUse(it,S)) && (ui.lvlok===false||it.lv<=lvl) && (ui.pkAvail===false||itemAvail(it).ok) && srcOk(it));
+  if(terms.length) list=list.filter(it=>{ const hay=(it.n+" "+(it.t||"")+" "+(it.set||"")+" "+statLine(it,20)+" "+(it.eq||[]).join(" ")).toLowerCase(); return terms.every(t=>hay.includes(t)); });
+  const total=list.length; const role=roleOf(S); const f=METRIC[role];
+  const sort=ui.sort||"best";
+  if(sort==="best"){
+    const base=f(compute(S)); const cur=S.gear[slot];
+    // score the top candidates by item level first so the list stays fast
+    list=list.sort((a,b)=>b.il-a.il).slice(0,400).map(it=>{ S.gear[slot]={id:it.id}; const d=f(compute(S))-base; return {it,d}; });
+    S.gear[slot]=cur;
+    list.sort((a,b)=>b.d-a.d||b.it.il-a.it.il);
+  } else {
+    const cmp={ilvl:(a,b)=>b.il-a.il||a.n.localeCompare(b.n),name:(a,b)=>a.n.localeCompare(b.n),rl:(a,b)=>b.lv-a.lv||b.il-a.il}[sort];
+    list=list.sort(cmp).map(it=>({it,d:null}));
+  }
+  const shown=list.slice(0,150); const curId=(S.gear[slot]||{}).id;
+  const unit=role==="tank"?"":ROLE_LABEL[role].includes("Heal")?" HPS":" DPS";
+  el.innerHTML=shown.length?shown.map(({it,d})=>`<button class="pk-row ${it.id===curId?"on":""}" role="option" aria-selected="${it.id===curId}" data-id="${it.id}">
+      <img src="${IICON(it.ic)}" alt="" loading="lazy" style="border-color:${QCOL[it.q]}">
+      <span class="pk-nm"><b style="color:${QCOL[it.q]}">${esc(it.n)}</b><small>${it.il} ilvl${it.rl>1?` · Req ${reqText(it)}`:""}${it.b?` · ${BIND_SHORT[it.b]}`:""}${it.u?" · Unique":""}${it.t&&it.t!=="Miscellaneous"?" · "+esc(it.t):""}${it.set?" · "+esc(it.set):""}${it.cr?` · <span class="crafted">Crafted: ${esc(it.cr.p)}${it.cr.r!=null?` ${it.cr.r}`:""}</span>`:it.src&&it.src[0]?` · <span class="${it.src[0].l==="k"?"unconf":"srcl"}">${esc(it.src[0].t)}</span>`:""}</small>${(()=>{ const av=itemAvail(it); const cl=uniqueClash(it,slot,S); return !av.ok?`<small class="bad">${esc(av.why)}</small>`:!canUse(it,S)?`<small class="bad">${esc(it.cl?"Classes: "+it.cl.join(", "):it.rc?"Races: "+it.rc.join(", "):`${S.char.cls}s can't use this`)}</small>`:it.lv>lvl?`<small class="bad">Requires level ${reqText(it)}</small>`:cl?`<small class="bad">${it.ug?"Unique-Equipped":"Unique"}: already worn in ${esc(cl.slot)} (equipping here moves it)</small>`:`<small class="pk-st">${esc(statLine(it))}</small>`; })()}</span>
+      ${d!==null?`<span class="pk-d ${d>0.05?"up":d<-0.05?"down":""}">${d>0.05?"+":""}${Math.abs(d)<0.05?"±0":d.toFixed(role==="tank"?2:1)}<small>${unit}</small></span>`:""}
+    </button>`).join("")+(total>shown.length?`<div class="note" style="padding:8px 10px">Showing ${shown.length} of ${total}. Type to narrow the list.</div>`:"")
+    :`<div class="empty">No ${esc(slot.toLowerCase())} items match. Try clearing the search or unticking a filter.</div>`;
+  el.querySelectorAll(".pk-row").forEach(b=>{ const it=ITEM_BY_ID[b.dataset.id];
+    b.onclick=()=>equip(slot,it.id); b.onmouseenter=ev=>showItemTip(it,ev); b.onmousemove=moveTip; b.onmouseleave=hideTip; });
+}
+
+/* ---------- 3D character model (Wowhead's viewer, proxied and cached by the Python app) ---------- */
+const MV={el:null,viewer:null,key:null,loading:null,failed:false};
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function ensureViewerLib(){
+  if(window.ZamModelViewer) return true;
+  if(!API.ok) return false;
+  if(!MV.loading) MV.loading=(async()=>{
+    if(!window.jQuery) await loadScript("assets/js/jquery.min.js");
+    window.WH=window.WH||{}; WH.debug=WH.debug||(()=>{}); WH.defaultAnimation="Stand"; WH.WebP=WH.WebP||{getImageExtension:()=>".webp"};
+    await loadScript("zam/modelviewer/live/viewer/viewer.min.js");
+    return !!window.ZamModelViewer;
+  })().catch(()=>false);
+  return MV.loading;
+}
+function modelItems(){
+  const out=[];
+  for(const [slot,vs] of Object.entries(VIEW_SLOT)){
+    const it=itemFor(S,slot); if(!it||!it.dsp) continue;
+    let s=it.inv===20?20:vs;   // robes use their own model slot
+    if(slot==="Main Hand") s=it.inv===17?17:21;
+    if(slot==="Off Hand") s=it.inv===14?14:it.inv===23?23:22;
+    if(slot==="Ranged / Relic"){ if(it.inv===28) continue; s=it.inv; }
+    out.push({slot:s,display:it.dsp});
+  }
+  return out;
+}
+function mountModel(){
+  const host=qs("#stageHost"); if(!host) return;
+  if(!MV.el){
+    MV.el=document.createElement("div"); MV.el.className="mv-wrap";
+    MV.el.innerHTML=`<div class="mv" id="mvBox"></div><div class="mv-msg" id="mvMsg">Loading 3D model…</div>
+      <div class="mv-bar"><div class="faction-toggle mv-g" role="group" aria-label="Model gender"><button type="button" data-g="male">Male</button><button type="button" data-g="female">Female</button></div>
+      <span class="mv-hint">Drag to rotate · scroll to zoom</span></div>`;
+    MV.el.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{ S.char.gender=b.dataset.g; persist(); updateModel(true); });
+  }
+  host.appendChild(MV.el);
+  updateModel();
+}
+async function updateModel(force){ force=!!force;
+  if(!MV.el) return;
+  const g=S.char.gender||"male";
+  MV.el.querySelectorAll("[data-g]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.g===g)));
+  const msg=MV.el.querySelector("#mvMsg"); const box=MV.el.querySelector("#mvBox");
+  const ok=await ensureViewerLib();
+  if(!ok){ msg.hidden=false; msg.textContent=API.ok?"The 3D viewer couldn't load. Check your internet connection; models are cached after the first view.":"Start WoWCraft with Launch WoWCraft to see the 3D model."; return; }
+  const raceId=RACE_MODEL[S.char.race]||1; const modelId=raceId*2-1+(g==="female"?1:0);
+  const key=modelId; const items=modelItems();
+  try{
+    if(MV.viewer && MV.key===key && !force){
+      const a=MV.viewer.renderer&&MV.viewer.renderer.actors&&MV.viewer.renderer.actors[0];
+      if(a){
+        try{
+          const prev=MV.items||[], key=x=>x.slot+":"+x.display, now=new Set(items.map(key));
+          const gone=prev.filter(x=>!now.has(key(x))), had=new Set(prev.map(key)), add=items.filter(x=>!had.has(key(x)));
+          gone.forEach(x=>{ if(!items.some(y=>y.slot===x.slot)) a.clearSlots(String(x.slot)); });
+          if(add.length) a.setItems(add);
+          MV.items=items; return;
+        }catch(err){ force=true; }
+      }
+    }
+    if(MV.viewer){ try{ MV.viewer.destroy(); }catch(e){} box.innerHTML=""; }
+    msg.hidden=false; msg.textContent=S.char.race==="skyborne"?"Skyborne models aren't in Wowhead's viewer yet, so this shows a Night Elf.":"Loading 3D model…";
+    const w=box.clientWidth||360, h=box.clientHeight||480;
+    MV.viewer=new ZamModelViewer({type:2,contentPath:"zam/modelviewer/classic/",container:jQuery(box),aspect:w/h,hd:false,
+      items:items.map(i=>[i.slot,i.display]),models:{id:modelId,type:16}});
+    MV.key=key; MV.items=items;
+    if(S.char.race!=="skyborne") setTimeout(()=>{ msg.hidden=true; },2500);
+  }catch(e){ msg.hidden=false; msg.textContent="The 3D viewer hit an error: "+e; }
+}
+function autoEnchant(role){
+  const f=METRIC[role]; S.enchants=S.enchants||{};
+  for(const sl of SLOTS){ const it=itemFor(S,sl); if(!it) continue; const cur0=S.enchants[sl]&&ENCH_BY_ID[S.enchants[sl]]&&enchantFits(ENCH_BY_ID[S.enchants[sl]],it)?S.enchants[sl]:null; if(!cur0) delete S.enchants[sl]; let best=null,bv=f(compute(S));
+    for(const en of CRAFT.enchants){ if(!enchantFits(en,it)||!enchantSources(en).length) continue; S.enchants[sl]=en.id; const v=f(compute(S)); if(v>bv+0.01){bv=v;best=en;} }
+    if(best) S.enchants[sl]=best.id; else if(cur0) S.enchants[sl]=cur0; else delete S.enchants[sl]; }
+  S.temps=S.temps||{};
+  for(const sl of TEMP_SLOTS){ const it=itemFor(S,sl); if(!it){ delete S.temps[sl]; continue; }
+    const cur0=tempOn(S,sl,it)?S.temps[sl]:null; if(cur0==null) delete S.temps[sl]; let best=null,bv=f(compute(S));
+    for(const t of CRAFT.temps||[]){ if(t.proc||!tempFits(t,it)||!tempAvail(t).ok) continue; S.temps[sl]=t.id; const v=f(compute(S)); if(v>bv+0.01){bv=v;best=t;} }
+    if(best) S.temps[sl]=best.id; else if(cur0!=null) S.temps[sl]=cur0; else delete S.temps[sl]; }
+}
+function autoEquip(role,keep){ // greedy best-in-slot for the given role; keep = start from what's equipped
+  const f=METRIC[role];
+  for(const slot of SLOTS){
+    if(slot==="Shirt"||slot==="Tabard") continue;
+    const cands=slotCandidates(slot,S).filter(it=>canUse(it,S)&&it.lv<=S.char.level&&it.q<=4&&itemAvail(it).ok&&(!AUTO_SRC||srcOk(it,AUTO_SRC))&&!(AUTO_NO_RAID&&(it.raid||(it.pvp||0)>=12||it.il>65))).sort((a,b)=>b.il-a.il).slice(0,250);
+    const cur=(S.gear[slot]||{}).id; let best=null,bv=-Infinity;
+    if(keep&&cur&&isActive(ITEM_BY_ID[cur])){ best=ITEM_BY_ID[cur]; bv=f(compute(S))+best.il*1e-3; }
+    for(const it of cands){ if(uniqueClash(it,slot,S)) continue; S.gear[slot]={id:it.id}; const v=f(compute(S))+it.il*1e-3; if(v>bv+(keep?0.01:0)){bv=v;best=it;} }
+    S.gear[slot]=best?{id:best.id}:{};
+  }
+}
+
+/* ---------- "Your character sheet" calibration ---------- */
+const SRC_LABEL={forever:["Forever client","src-f"],sheet:["Your character sheet","src-s"],"sheet-interp":["Your sheets (between levels)","src-s"],"sheet-scaled":["Your sheet (scaled to this level)","src-s"],estimate:["Estimate · not published for Forever","src-e"],manual:["Typed in","src-s"]};
+function srcBadge(k){ const l=SRC_LABEL[k]||SRC_LABEL.estimate; return `<span class="src ${l[1]}">${l[0]}</span>`; }
+async function loadCalib(){ try{ if(API.ok){ CALIB=await API.get("calibration")||{}; return; } }catch(e){} try{ CALIB=JSON.parse(localStorage.getItem("wowcraft.calib")||"{}"); }catch(e){ CALIB={}; } }
+async function saveCalib(){ try{ localStorage.setItem("wowcraft.calib",JSON.stringify(CALIB)); }catch(e){} if(API.ok){ try{ await API.send("calibration","PUT",CALIB); }catch(e){ toast("Couldn't save to disk. Is WoWCraft still running?"); } } }
+function renderCalib(el){
+  if(!el) return;
+  const L=+S.char.level||60, B=baseFor(S), key=calibKey(S), pts=CALIB[key]||{}, mine=pts[L];
+  const fc=fClass(S.char.cls), hasMana=B.mana>0, hasRap=fc.rapPerAgi>0;
+  const o=compute({...S,gear:blankGear(),enchants:{},cons:[],other:{}});
+  const fields=[["str","Strength",Math.round(o.P.str)],["agi","Agility",Math.round(o.P.agi)],["sta","Stamina",Math.round(o.P.sta)],["int","Intellect",Math.round(o.P.int)],["spi","Spirit",Math.round(o.P.spi)],
+    ["hp","Health",Math.round(o.hp)],["ap","Attack Power",Math.round(o.ap)]].concat(hasRap?[["rap","Ranged Attack Power",Math.round(o.rap)]]:[])
+    .concat([["crit","Melee crit %",o.mcrit.toFixed(2)]]).concat(hasMana?[["scrit","Spell crit %",o.scrit.toFixed(2)]]:[]).concat([["dodge","Dodge %",o.dodge.toFixed(2)]]);
+  const saved=Object.keys(pts).map(Number).sort((a,b)=>a-b);
+  el.innerHTML=`<h3>Your character sheet at level ${L} <span class="muted" style="font-family:var(--f-body);letter-spacing:0;font-size:13px">${esc(RACE_NAME[S.char.race]||"")} ${esc(S.char.cls)}</span></h3>
+    <div class="note">Forever's game files include base mana, health per Stamina, crit per Agility, spell crit per Intellect and attack power per stat for every level, and WoWCraft uses those directly. Your base attributes, base health, base crit, dodge and the level part of attack power come from the server and aren't published anywhere, so they're estimates until you enter them here. To get them, take off all your gear, cancel any buffs, and copy the numbers from your in-game character sheet. One level is enough; entering two or more levels lets WoWCraft fill in every level in between.</div>
+    <div class="statgrid" id="calibFields">${fields.map(([k,n,ph])=>`<div class="field"><label for="c_${k}">${n}</label><input id="c_${k}" type="number" step="any" data-c="${k}" placeholder="${ph}"></div>`).join("")}</div>
+    <div class="calib-actions"><button class="btn small primary" id="calibSave">Save level ${L} sheet</button>${mine?`<button class="btn small ghost" id="calibDel">Forget level ${L} sheet</button>`:""}
+      <span class="note">${saved.length?`Saved for this race and class: level ${saved.join(", ")}`:"Nothing saved yet for this race and class."}</span></div>
+    <div class="field" style="max-width:220px;margin-top:6px"><label for="tgt">Target</label><select id="tgt">${[0,1,2,3].map(d=>`<option value="${d}" ${targetDiff(S)===d?"selected":""}>Level ${Math.min(63,L+d)}${d===0?" (your level)":d===3?" (boss, +3)":` (+${d})`}</option>`).join("")}</select></div>`;
+  el.querySelector("#tgt").onchange=e=>{ S.settings.tdiff=+e.target.value; delete S.settings.target; persist(); renderPlate(); };
+  el.querySelector("#calibSave").onclick=async()=>{
+    const v={}; el.querySelectorAll("[data-c]").forEach(i=>{ if(i.value!=="") v[i.dataset.c]=parseFloat(i.value); });
+    if(["str","agi","sta","int","spi"].some(k=>v[k]==null)){ toast("Enter all five attributes first"); return; }
+    const E=effectTotals(S), e=k=>E[k]||0, fl=fLevel(S.char.cls,L)||{hpPerSta:10,critPerAgi:B.critPerAgi,scritPerInt:B.scritPerInt};
+    const rec={};
+    ["str","agi","sta","int","spi"].forEach(k=>rec[k]=v[k]/(1+(e(k+"_pct")+e("all_stats_pct"))/100));   // strip talent/racial % so it's the true base
+    if(v.hp!=null) rec.hp=v.hp/(1+e("health_pct")/100) - (Math.min(v.sta,20)+Math.max(v.sta-20,0)*fl.hpPerSta);
+    if(v.ap!=null) rec.apOff=v.ap/(1+e("ap_pct")/100) - (v.str*fc.apPerStr + v.agi*fc.apPerAgi);
+    if(v.rap!=null&&hasRap) rec.rapOff=v.rap/(1+e("rap_pct")/100) - v.agi*fc.rapPerAgi;
+    if(v.crit!=null) rec.critBase=v.crit - v.agi*fl.critPerAgi - e("melee_crit");
+    if(v.scrit!=null&&hasMana) rec.scritBase=v.scrit - v.int*fl.scritPerInt - e("spell_crit");
+    if(v.dodge!=null) rec.dodgeBase=v.dodge - v.agi*B.dodgePerAgi - e("dodge");
+    CALIB[key]=CALIB[key]||{}; CALIB[key][L]=rec; await saveCalib();
+    toast(`Saved your level ${L} sheet`); commit();
+  };
+  const del=el.querySelector("#calibDel"); if(del) del.onclick=async()=>{ delete CALIB[key][L]; await saveCalib(); commit(); };
+}
+function sourcesHTML(state,T){
+  const B=baseFor(state), s=B.src, fc=fClass(state.char.cls), L=B.L;
+  const dd=targetDiff(state);
+  const rows=[
+    ["Base Strength, Agility, Stamina, Intellect, Spirit",`${Math.round(B.str)} / ${Math.round(B.agi)} / ${Math.round(B.sta)} / ${Math.round(B.int)} / ${Math.round(B.spi)}`,s.str],
+    ["Base health",fmt(B.hp),s.hp],
+    ["Base mana",B.mana?fmt(B.mana):"none",s.mana],
+    ["Health per Stamina (after the first 20)",fmt(B.hpPerSta),s.hpPerSta],
+    ["Mana per Intellect (after the first 20)","15","forever"],
+    ["Agility per 1% crit",fmt(1/B.critPerAgi,1),s.critPerAgi],
+    ["Intellect per 1% spell crit",B.scritPerInt?fmt(1/B.scritPerInt,1):"none",s.scritPerInt],
+    ["Attack power per Strength / Agility",`${fc.apPerStr} / ${fc.apPerAgi}`,"forever"],
+    ["Ranged attack power per Agility",fc.rapPerAgi?String(fc.rapPerAgi):"none","forever"],
+    ["Attack power from level",`${fmt(B.apOff)}${fc.rapPerAgi?` (ranged ${fmt(B.rapOff)})`:""}`,s.apOff],
+    ["Base melee crit",fmt(B.critBase,2)+"%",s.critBase],
+    ["Base spell crit",B.scritPerInt?fmt(B.scritBase,2)+"%":"none",s.scritBase],
+    ["Agility per 1% dodge, base dodge",`${fmt(1/B.dodgePerAgi,1)}, ${fmt(B.dodgeBase,2)}%`,"estimate"],
+    ["Armor per Agility","2","forever"],
+    [`Armor constant vs level ${T}`,fmt(armorConstant(T)),"forever"],
+    [`Hit needed vs level ${T} (melee / spell / dual wield)`,`${[5,6,7,8][dd]}% / ${[4,5,6,17][dd]}% / ${[24,25,26,27][dd]}%`,dd===0||dd===3?"forever":"estimate"],
+    ["Spirit mana regen","class formula","estimate"],
+  ];
+  return `<section class="frame card"><h3>Where these numbers come from <span class="muted" style="font-family:var(--f-body);letter-spacing:0;font-size:13px">level ${L} ${esc(state.char.cls)}, Forever build ${esc((FSTATS&&FSTATS.build)||"")}</span></h3>
+    <div class="src-table">${rows.map(([n,v,k])=>`<div class="src-row"><span>${esc(n)}</span><span class="mono">${esc(v)}</span>${srcBadge(k)}</div>`).join("")}</div>
+    <div class="note">Anything marked Estimate isn't in Forever's game files and nobody has published it yet. Enter your naked character sheet on the Gear &amp; Stats tab to replace the estimates with your real numbers. DPS and HPS figures compare builds against each other; they aren't log-accurate predictions.</div></section>`;
+}
+
+function renderSheet(v){
+  if(!S.char.cls){ v.innerHTML=`<div class="empty">Create your character first.</div>`; return; }
+  const o=compute(S); const role=roleOf(S); const roles=rolesFor(S.char.cls);
+  const P=o.P, c=CLS[S.char.cls];
+  const roleVal={melee:[o.meleeDps,"DPS · white + abilities"],ranged:[o.rangedDps,"DPS · auto shot + shots"],spell:[o.spellDps,"DPS · "+(o.spellName||"")],heal:[o.hps,"HPS · "+(o.healName||"")],tank:[o.tank,"survivability index"]};
+  const W=statWeights(S,role); const norm=W.length?Math.max(...W.map(x=>x.v/x.d)):1;
+  const statName=Object.fromEntries(STATS); statName.str="Strength";
+  const perPt=W.map(x=>({...x,pp:x.v/x.d})).sort((a,b)=>b.pp-a.pp);
+  const kv=rows=>`<div class="kv">${rows.map(([a,b,cls])=>`<span>${a}</span><span class="${cls||""}">${b}</span>`).join("")}</div>`;
+  const T=targetLevel(S); const dd=targetDiff(S), hitCap=[5,6,7,8][dd], sHitCap=[4,5,6,17][dd];
+  v.innerHTML=`
+  <div class="roles">${["melee","ranged","spell","heal","tank"].filter(r=>roles.includes(r)).map(r=>`<button class="frame role ${role===r?"on":""}" data-role="${r}"><span class="lbl">${ROLE_LABEL[r]}</span><span class="v">${fmt(roleVal[r][0],r==="tank"?1:0)}</span><span class="u">${esc(roleVal[r][1])}</span></button>`).join("")}</div>
+  <div class="frame card"><h3>Stat priority for ${ROLE_LABEL[role]} <span class="muted" style="font-family:var(--f-body);font-size:13px;letter-spacing:0">${S.settings.role==="auto"?"(picked from your deepest tree; click a role above to change)":'<a href="#" id="autoRole" style="color:var(--gold)">back to auto</a>'}</span></h3>
+    ${perPt.length?`<div class="weights">${perPt.map(x=>`<div class="wrow"><span>${esc(statName[x.k]||x.k)}</span><div class="wbar"><i style="width:${Math.max(2,x.pp/norm*100)}%"></i></div><span class="mono">${(x.pp/ (perPt.find(p=>PRIMARY.includes(p.k))||perPt[0]).pp).toFixed(2)}</span></div>`).join("")}</div>
+    <div class="note">Value of one point of each stat for this build, relative to your best primary stat (1.00). Crit, hit and dodge are per 1%.</div>`:`<div class="muted">No stat moves this metric yet. Add a weapon or gear for this role.</div>`}
+  </div>
+  <div class="sheet">
+    <div class="frame card"><h3>Attributes</h3>${kv([["Strength",fmt(P.str)],["Agility",fmt(P.agi)],["Stamina",fmt(P.sta)],["Intellect",fmt(P.int)],["Spirit",fmt(P.spi)],["Health",fmt(o.hp)],["Mana",o.mana?fmt(o.mana):"—"],["Armor",fmt(o.armor)]])}</div>
+    <div class="frame card"><h3>Melee</h3>${kv([["Attack power",fmt(o.ap)],["Crit chance",fmt(o.mcrit,2)+"%"],["Hit bonus",fmt(o.mhit,1)+"% / "+hitCap+"%",o.mhit>=hitCap?"good":"mid"],["Est. DPS",fmt(o.meleeDps,1)]])}</div>
+    ${c.rap!=="none"?`<div class="frame card"><h3>Ranged</h3>${kv([["Ranged AP",fmt(o.rap)],["Crit chance",fmt(o.rcrit,2)+"%"],["Hit bonus",fmt(o.rhit,1)+"% / "+hitCap+"%",o.rhit>=hitCap?"good":"mid"],["Est. DPS",fmt(o.rangedDps,1)]])}</div>`:""}
+    ${o.mana?`<div class="frame card"><h3>Spell</h3>${kv([["Spell damage",fmt(o.spDmg)],["Healing power",fmt(o.healPow)],["Spell crit",fmt(o.scrit,2)+"%"],["Spell hit",fmt(o.shit,1)+"% / "+sHitCap+"%",o.shit>=sHitCap?"good":"mid"],o.spellName?["Est. DPS",fmt(o.spellDps,1)]:null,o.spellName?["Time to OOM",isFinite(o.spellOom)?fmt(o.spellOom)+" s":"never"]:null,o.healName?["Est. HPS",fmt(o.hps,1)]:null,o.healName?["Heal time to OOM",isFinite(o.healOom)?fmt(o.healOom)+" s":"never"]:null].filter(Boolean))}</div>
+    <div class="frame card"><h3>Regeneration</h3>${kv([["Mana / 5s (gear)",fmt(o.mp5,1)],["Spirit regen / 5s",fmt(o.spiMp5,1)],["Regen while casting",fmt(o.regenCast,1)],["Regen outside 5-sec rule",fmt(o.regenIdle,1)]])}</div>`:""}
+    <div class="frame card"><h3>Defense</h3>${kv([["Defense",fmt(o.def)],["Armor reduction vs "+T,fmt(o.armorDR,1)+"%"],["Dodge",fmt(o.dodge,2)+"%"],["Parry",c.parry?fmt(o.parry,2)+"%":"—"],["Block",o.block?fmt(o.block,2)+"%":"—"],["Total avoidance",fmt(o.avoid,1)+"%"],["Effective health",fmt(o.ehp)],[`Crit immune vs +3 (${(+S.char.level||60)*5+140} def)`,o.critImmune?"Yes":"No",o.critImmune?"good":"bad"]])}</div>
+  </div>
+  ${sourcesHTML(S,T)}`;
+  v.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>{ S.settings.role=b.dataset.role; commit(); });
+  if(qs("#autoRole")) qs("#autoRole").onclick=e=>{ e.preventDefault(); S.settings.role="auto"; commit(); };
+}
+
+/* ---------- Saved builds (db when available, browser storage otherwise) ---------- */
+const store={db:null,uid:null,mode:"local",list:[],unsub:null};
+async function initStore(){
+  if(API.ok){ try{ store.list=(await API.get("builds")).builds; store.mode="files"; }catch(e){ readLocalBuilds(); } }
+  else readLocalBuilds();
+  if(ui.tab==="builds") render();
+}
+function readLocalBuilds(){ store.mode="local"; try{ store.list=JSON.parse(localStorage.getItem("wowcraft.builds")||"[]"); }catch(e){ store.list=[]; } }
+function writeLocalBuilds(){ try{ localStorage.setItem("wowcraft.builds",JSON.stringify(store.list)); }catch(e){} }
+function snapshotBuild(name){
+  const o=compute(S); const role=roleOf(S);
+  return {kind:"build",name,savedAt:Date.now(),role,score:METRIC[role](o),
+    summary:{spec:classData(S.char.cls).trees.map((t,i)=>treePoints(i)).join("/"),hp:Math.round(o.hp),mana:Math.round(o.mana)},
+    state:JSON.parse(JSON.stringify({...S,example:false}))};
+}
+async function saveBuild(name){
+  const b=snapshotBuild(name);
+  if(store.mode==="files"){ try{ const saved=await API.send("builds","POST",b); store.list.unshift(saved); toast("Build saved to WoWCraft\\builds"); render(); return; }catch(e){ toast("Couldn't save to disk. Is WoWCraft still running?"); return; } }
+  store.list.unshift({id:"b"+b.savedAt,...b}); writeLocalBuilds(); toast("Build saved in this browser"); render();
+}
+async function deleteBuild(id){
+  if(store.mode==="files"){ try{ await API.send("builds/"+encodeURIComponent(id),"DELETE"); store.list=store.list.filter(b=>b.id!==id); ui.compare=ui.compare.filter(x=>x!==id); toast("Build deleted"); render(); return; }catch(e){ toast("Couldn't delete the build file."); return; } }
+  store.list=store.list.filter(b=>b.id!==id); ui.compare=ui.compare.filter(x=>x!==id); writeLocalBuilds(); render();
+}
+function loadBuild(b){ S=JSON.parse(JSON.stringify(b.state)); S.v=3; ui.sel=null; ui.editing=false; ui.tab="talents"; commit(); toast(`Loaded “${b.name}”`); }
+function encodeBuild(){ return btoa(unescape(encodeURIComponent(JSON.stringify({wowf:2,state:S})))); }
+function decodeBuild(txt){ const o=JSON.parse(decodeURIComponent(escape(atob(txt.trim())))); if(!o||o.wowf!==2||!o.state||!o.state.char) throw new Error("bad"); return o.state; }
+
+function renderBuilds(v){
+  const pinned=store.list.filter(b=>ui.compare.includes(b.id));
+  const cur={id:"__current",name:"Current (unsaved)",state:S};
+  const cols=[cur,...pinned];
+  const rows=cols.map(b=>{ const o=compute(b.state); return {b,o,role:roleOf(b.state)}; });
+  const metrics=[["Class",r=>`${r.b.state.char.cls}`,null],["Spec",r=>classData(r.b.state.char.cls).trees.map((t,i)=>t.talents.reduce((a,x)=>a+(r.b.state.talents[x.id]||0),0)).join("/"),null],
+    ["Health",r=>r.o.hp,1],["Mana",r=>r.o.mana,1],["Armor",r=>r.o.armor,1],["Attack power",r=>r.o.ap,1],["Spell damage",r=>r.o.sp,1],["Healing power",r=>r.o.healPow,1],
+    ["Melee crit %",r=>r.o.mcrit,1],["Spell crit %",r=>r.o.scrit,1],["Melee DPS",r=>r.o.meleeDps,1],["Ranged DPS",r=>r.o.rangedDps,1],["Spell DPS",r=>r.o.spellDps,1],["HPS",r=>r.o.hps,1],["Effective health",r=>r.o.ehp,1],["Avoidance %",r=>r.o.avoid,1]];
+  const rankRole=roleOf(S); const ranked=[...store.list.map(b=>({b,v:METRIC[rankRole](compute(b.state)),cls:b.state.char.cls})).filter(x=>x.cls===S.char.cls), {b:cur,v:METRIC[rankRole](compute(S)),cls:S.char.cls}].sort((a,b)=>b.v-a.v);
+  const top=ranked.length?ranked[0].v||1:1;
+  v.innerHTML=`<div class="builds">
+    <div class="frame card"><h3>Save this build</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="bname" placeholder="e.g. 31/20 Holy raid healer" style="flex:1 1 200px" maxlength="60"><button class="btn primary" id="bsave" ${S.char.cls?"":"disabled"}>Save build</button></div>
+      <div class="note">${store.mode==="files"?"Builds are saved as files in your WoWCraft\\builds folder, so OneDrive keeps them on every PC you sign into.":"WoWCraft isn't running, so builds are kept in this browser only. Start it with Launch WoWCraft to save to disk."}</div>
+      <h3 style="margin-top:8px">Saved builds <span class="muted" style="font-family:var(--f-body);letter-spacing:0;font-size:13px">tick up to 3 to compare</span></h3>
+      <div class="blist">${store.list.length?store.list.map(b=>`<div class="bitem"><input type="checkbox" data-cmp="${esc(b.id)}" aria-label="Compare ${esc(b.name)}" ${ui.compare.includes(b.id)?"checked":""}>
+        <div class="nm"><b style="color:${CLASS_COLOR[b.state.char.cls]}">${esc(b.name)}</b><small>${esc(b.state.char.first)} · ${esc(RACE_NAME[b.state.char.race])} ${esc(b.state.char.cls)} · ${esc(b.summary.spec)} · ${ROLE_LABEL[b.role]} ${fmt(b.score,b.role==="tank"?1:0)}</small></div>
+        <div class="act"><button class="btn small" data-load="${esc(b.id)}">Load</button><button class="btn small ghost" data-del="${esc(b.id)}">${ui.confirm==="del:"+b.id?"Confirm":"Delete"}</button></div></div>`).join(""):`<div class="empty">No saved builds yet. Spend some talents, add gear, then save it here to compare later.</div>`}</div>
+    </div>
+    <div class="frame card"><h3>Strongest ${esc(S.char.cls||"")} builds for ${ROLE_LABEL[rankRole]}</h3>
+      <div class="rank-bars">${ranked.map((x,i)=>`<div class="wrow" style="grid-template-columns:minmax(0,1fr) 1.2fr 64px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i===0?"★ ":""}${esc(x.b.name)}</span><div class="wbar"><i style="width:${Math.max(2,x.v/top*100)}%"></i></div><span class="mono">${fmt(x.v,rankRole==="tank"?1:0)}</span></div>`).join("")}</div>
+      <div class="note">Ranks every saved ${esc(S.char.cls||"")} build against your current one using the ${ROLE_LABEL[rankRole]} metric. Change the role on the Character Sheet tab.</div>
+      <h3 style="margin-top:8px">Share or back up</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="bcopy">Copy build code</button><button class="btn small ghost" id="bimp">Import code</button></div>
+      <textarea id="bcode" placeholder="Paste a build code here, then press Import code" aria-label="Build code"></textarea>
+      <div class="note" id="bmsg"></div>
+    </div></div>
+    <div class="frame card cmp"><h3>Side-by-side</h3><table><thead><tr><th>Stat</th>${rows.map(r=>`<th>${esc(r.b.name)}</th>`).join("")}</tr></thead><tbody>
+      ${metrics.map(([n,f,num])=>{ const vals=rows.map(f); const best=num?Math.max(...vals.map(x=>+x||0)):null; return `<tr><td>${n}</td>${vals.map(x=>`<td class="${num&&rows.length>1&&x===best&&best>0?"best":""}">${num?fmt(x,n.includes("%")||n.includes("PS")?1:0):esc(x)}</td>`).join("")}</tr>`; }).join("")}
+    </tbody></table></div>`;
+  qs("#bsave").onclick=()=>{ const n=qs("#bname").value.trim()||`${S.char.cls} ${classData(S.char.cls).trees.map((t,i)=>treePoints(i)).join("/")}`; saveBuild(n); qs("#bname").value=""; };
+  v.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{ const x=store.list.find(y=>y.id===b.dataset.load); if(x) loadBuild(x); });
+  v.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const id=b.dataset.del; if(ui.confirm==="del:"+id){ ui.confirm=null; deleteBuild(id); } else { ui.confirm="del:"+id; render(); } });
+  v.querySelectorAll("[data-cmp]").forEach(cb=>cb.onchange=()=>{ const id=cb.dataset.cmp; if(cb.checked){ if(ui.compare.length>=3){ cb.checked=false; toast("Compare up to 3 builds"); return; } ui.compare.push(id); } else ui.compare=ui.compare.filter(x=>x!==id); render(); });
+  qs("#bcopy").onclick=async()=>{ const code=encodeBuild(); try{ await navigator.clipboard.writeText(code); toast("Build code copied"); }catch(e){ const t=qs("#bcode"); t.value=code; t.select(); qs("#bmsg").textContent="Copy the selected code above."; } };
+  qs("#bimp").onclick=()=>{ try{ const st=decodeBuild(qs("#bcode").value); S=st; S.v=3; commit(); toast("Build imported"); }catch(e){ qs("#bmsg").innerHTML='<span class="bad">That code could not be read. Paste the full code from “Copy build code”.</span>'; } };
+}
+
+function render(){
+  hideTip();
+  renderPlate(); renderRacials(); renderClassRacials();
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.tab===ui.tab)));
+  const v=qs("#view");
+  ({talents:renderTalents,gear:renderGear,sheet:renderSheet,prof:renderProfTab,builds:renderBuilds,updates:renderUpdates}[ui.tab]||renderTalents)(v);
+}
+document.addEventListener("pointerdown",()=>hideTip(),true);
+document.documentElement.addEventListener("mouseleave",()=>hideTip());
+addEventListener("blur",()=>hideTip());
+document.addEventListener("mouseover",e=>{ if(!qs("#tip").hidden && !(e.target.closest&&e.target.closest(".tal,.gslot,.pk-row,[data-tip],[data-ctip]"))) hideTip(); });
+addEventListener("scroll",()=>hideTip(),{passive:true});
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ ui.tab=t.dataset.tab; ui.confirm=null; try{ localStorage.setItem("wowcraft.tab",ui.tab); }catch(e){} render(); });
+
+/* ================== Updates tab ================== */
+const UPD={data:null,timer:null,full:false,busy:false};
+function fmtWhen(t){ if(!t) return "Never"; const d=new Date(t*1000); return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+async function updFetch(){ try{ UPD.data=await API.get("update"); }catch(e){ UPD.data=null; } }
+function updPoll(){
+  clearTimeout(UPD.timer);
+  if(ui.tab!=="updates") return;
+  UPD.timer=setTimeout(async()=>{ const was=UPD.data&&UPD.data.running; await updFetch(); if(ui.tab!=="updates") return; drawUpdates(qs("#view")); if(UPD.data&&UPD.data.running) updPoll(); else if(was) toast("Update finished. Reload WoWCraft to use the new data."); },1500);
+}
+async function renderUpdates(v){
+  v.innerHTML=`<div class="empty">Checking update status…</div>`;
+  await updFetch(); drawUpdates(v); if(UPD.data&&UPD.data.running) updPoll();
+}
+function updReport(res){
+  if(!res) return "";
+  const steps=Object.values(res.report||{});
+  const knownCls=Object.keys(ARMOR_OK);
+  const newCls=[]; steps.forEach(st=>{ const g=st.groups.Classes; if(g) g.examples.added.forEach(c=>{ if(!knownCls.includes(c)) newCls.push(c); }); });
+  const grp=(name,g)=>{ const n=g.added+g.removed+g.changed;
+    const ex=["added","removed","changed"].filter(k=>g.examples[k].length).map(k=>`<div class="upd-ex"><b class="upd-${k}">${k[0].toUpperCase()+k.slice(1)}:</b> ${g.examples[k].map(esc).join(", ")}${g[k]>g.examples[k].length?` <span class="muted">and ${g[k]-g.examples[k].length} more</span>`:""}</div>`).join("");
+    return `<div class="upd-grp"><div class="upd-line"><span>${esc(name)}</span><span class="muted">${g.total} total</span>${n?`<span class="upd-added">+${g.added}</span><span class="upd-removed">−${g.removed}</span><span class="upd-changed">~${g.changed}</span>`:`<span class="muted">no changes</span>`}</div>${ex}</div>`; };
+  return `<section class="frame card"><h3>${res.ok?"Update finished":"Update finished with problems"} <span class="muted" style="font-family:var(--f-body);letter-spacing:0;font-size:13px">${esc((UPD.data.targets[res.target]||{}).label||res.target)}, ${fmtWhen(res.at)}</span></h3>
+    ${(res.errors||[]).map(e=>`<div class="bad">${esc(e)}. The previous data for this part was kept.</div>`).join("")}
+    ${newCls.length?`<div class="bad">New class${newCls.length>1?"es":""} found: ${newCls.map(esc).join(", ")}. Talents load, but WoWCraft's armor, weapon and stat rules for ${newCls.length>1?"them":"it"} need an app update.</div>`:""}
+    ${steps.map(st=>`<div class="upd-step"><div class="eyebrow">${esc(st.label)}</div>${Object.entries(st.groups).map(([n,g])=>grp(n,g)).join("")}</div>`).join("")||`<div class="muted">Nothing was updated.</div>`}
+    <div><button class="btn" id="updReload">Reload WoWCraft to use the new data</button></div></section>`;
+}
+function drawUpdates(v){
+  const D=UPD.data;
+  if(!D){ v.innerHTML=`<div class="empty">Updates need the WoWCraft app running. Start it with Launch WoWCraft.bat and open this tab again.</div>`; return; }
+  const run=D.running, T=D.targets, st=D.state||{};
+  const card=(k,big)=>{ const t=T[k], s=st[k]||{};
+    return `<article class="frame card upd-card ${big?"upd-big":""}"><h3>${esc(t.label)}</h3><div class="note">${esc(t.what)}</div>
+      ${t.steps.length>1?`<div class="note">Runs: ${t.steps.map(esc).join(" → ")}</div>`:""}
+      <div class="upd-meta"><span>Last updated: <b>${fmtWhen(s.at)}</b>${s.via&&s.via!==k?` <span class="muted">(with ${esc((T[s.via]||{}).label||s.via)})</span>`:""}</span>${s.at?`<span>${s.ok===false?`<span class="bad">had problems</span>`:`${s.changes||0} change${s.changes===1?"":"s"}`}</span>`:""}</div>
+      <div><button class="btn ${big?"":"small"}" data-upd="${k}" ${run?"disabled":""}>${run&&D.target===k?"Updating…":"Update "+esc(t.label.toLowerCase())}</button></div></article>`; };
+  v.innerHTML=`<div class="upd">
+    <section class="frame card"><h3>Keep WoWCraft current</h3>
+      <div class="note">Forever will keep changing. Each button pulls that part of the data from its source and only processes what changed: new things are added, things Forever no longer has are removed, and changed things are replaced. Nothing is duplicated. Tooltips, icons and art already on your PC are reused. Your saved builds aren't touched; gear that's removed from Forever simply shows as empty.</div>
+      <div class="upd-ver">${Object.entries(D.versions||{}).map(([k,x])=>`<span><small>${esc(k)}</small><b>${esc(x)}</b></span>`).join("")}</div>
+      <label class="switch" title="Gear that ForeverDB players haven't seen in Forever and that isn't in Forever's own client data (like a crafting recipe) is inactive: hidden and not counted. Tick to show it anyway."><input type="checkbox" id="updUnconf" ${showUnconfirmed()?"checked":""}> Show gear not yet confirmed in Forever (${ALL_ITEMS.length-ALL_ITEMS.filter(i=>i.ok).length} items)</label>
+      <label class="switch" title="Ask Wowhead about every item again, not just new or changed ones. Takes much longer."><input type="checkbox" id="updFull" ${UPD.full?"checked":""} ${run?"disabled":""}> Full re-check of every item (slow)</label>
+    </section>
+    ${card("everything",true)}
+    <div class="upd-grid">${["talents","items","crafting","sources","stats"].map(k=>card(k)).join("")}</div>
+    ${run||(D.log&&D.log.length&&!D.result)?`<section class="frame card"><h3>${run?"Working…":"Log"}</h3><pre class="upd-log" id="updLog">${esc((D.log||[]).join("\n"))}</pre></section>`:""}
+    ${!run?updReport(D.result):""}
+    ${!run&&D.result&&D.log&&D.log.length?`<details class="frame"><summary>Update log</summary><pre class="upd-log">${esc(D.log.join("\n"))}</pre></details>`:""}
+  </div>`;
+  const lg=qs("#updLog"); if(lg) lg.scrollTop=lg.scrollHeight;
+  const f=qs("#updFull"); if(f) f.onchange=()=>{ UPD.full=f.checked; };
+  const uc=qs("#updUnconf"); if(uc) uc.onchange=()=>{ try{ localStorage.setItem("wowcraft.showUnconfirmed",uc.checked?"1":"0"); }catch(e){} applyConfirmed(); PLAN.cache={}; renderPlate(); toast(uc.checked?"Unconfirmed gear is now shown":"Only gear confirmed in Forever is shown"); };
+  const rl=qs("#updReload"); if(rl) rl.onclick=()=>location.reload();
+  v.querySelectorAll("[data-upd]").forEach(b=>b.onclick=async()=>{
+    if(UPD.busy) return; UPD.busy=true;
+    try{ const r=await fetch("api/update/"+b.dataset.upd,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({full:UPD.full})});
+      if(r.status===409) toast("An update is already running"); else if(!r.ok) toast("Couldn't start the update");
+    }catch(e){ toast("Couldn't reach WoWCraft. Is it still running?"); }
+    UPD.busy=false; await updFetch(); drawUpdates(v); updPoll();
+  });
+}
+
+/* ================== Boot ================== */
+(async function boot(){
+  try{ DATA=await (await fetch("game.json")).json(); }catch(e){ document.getElementById("view").innerHTML='<div class="empty">Talent data is missing. Close WoWCraft and run it again while online to download it.</div>'; return; }
+  racesList().forEach(r=>{ if(r.classes&&r.classes.length) CLASSES_BY_RACE[r.id]=r.classes; });
+  try{ const IJ=await (await fetch("items.json")).json(); ALL_ITEMS=IJ.items||[]; ALL_ITEMS.forEach(it=>{ ITEM_BY_ID[it.id]=it; it.lv=it.rl||1; }); applyConfirmed(); }catch(e){ ITEMS=[]; }
+  try{ FSTATS=await (await fetch("forever_stats.json")).json(); }catch(e){ FSTATS=null; }
+  try{ SPEC_BUILDS=await (await fetch("spec_builds.json")).json(); }catch(e){ SPEC_BUILDS={builds:{}}; }
+  try{ CRAFT=await (await fetch("crafting.json")).json(); CRAFT.enchants.forEach(en=>ENCH_BY_ID[en.id]=en); CRAFT.consumables.forEach(c=>CONS_BY_ID[c.id]=c); (CRAFT.temps=CRAFT.temps||[]).forEach(t=>TEMP_BY_ID[t.id]=t); }catch(e){}
+  let saved=null;
+  try{ const ping=await API.get("ping"); API.ok=!!ping.ok; }catch(e){ API.ok=false; }
+  if(API.ok){ try{ const c=await API.get("current"); if(c&&c.v===3) saved=c; }catch(e){} }
+  await loadCalib();
+  if(saved&&saved.baseOverride&&saved.char&&saved.char.cls){ // older versions stored typed-in base stats; keep them as a saved sheet
+    const ov=saved.baseOverride, k=`${saved.char.cls}|${raceDataKey(saved.char.race,saved.char.faction)}`, L=+saved.char.level||60, rec={};
+    ["str","agi","sta","int","spi","hp"].forEach(x=>{ if(ov[x]!=null&&isFinite(ov[x])) rec[x]=ov[x]; });
+    if(Object.keys(rec).length){ CALIB[k]=CALIB[k]||{}; CALIB[k][L]=Object.assign(rec,CALIB[k][L]||{}); await saveCalib(); }
+    saved.baseOverride=null;
+  }
+  S=saved||load()||exampleState();
+  if(S.example && S.char.cls==="Paladin" && !Object.keys(S.talents).length){ if(!applySpecBuild(S,0)) seedExampleTalents(); }
+  if(S.example && ITEMS.length && !SLOTS.some(sl=>(S.gear[sl]||{}).id)){ autoEquip("heal"); autoEnchant("heal"); }
+  SLOTS.forEach(sl=>{ if(!S.gear[sl]) S.gear[sl]={}; });
+  profState(S); S.enchants=S.enchants||{}; S.cons=S.cons||[];
+  try{ const t=localStorage.getItem("wowcraft.tab"); if(t) ui.tab=t; }catch(e){}
+  render(); initStore();
+})();
+function seedExampleTalents(){ // greedy: fill Holy then Retribution, respecting rules, to show a 31/0/20 hybrid
+  const cd=classData("Paladin"); if(!cd.trees.length) return;
+  const fill=(ti,cap)=>{ let guard=500; while(treePoints(ti)<cap && spent()<totalPoints() && guard--){ const opts=cd.trees[ti].talents.map(t=>Object.assign({ti},t)).filter(t=>canAdd(t).ok).sort((a,b)=>a.tier-b.tier); if(!opts.length) break; S.talents[opts[0].id]=(S.talents[opts[0].id]||0)+1; } };
+  fill(0,31); fill(2,20);
+}
+</script>
+
+</body></html>
